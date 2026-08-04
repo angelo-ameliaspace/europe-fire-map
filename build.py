@@ -31,7 +31,6 @@ SATS = [
     ("modis-c6.1",         "MODIS_C6_1",     "Terra/Aqua", "MODIS", False),
 ]
 MODIS_MIN_CONF = 30      # MODIS confidence is 0-100, not low/nominal/high
-RECENT_H = 6             # every detection this new is drawn individually, clustered or not
 
 # map frame (drawn) and projection constants
 BB = (-11.0, 34.0, 37.0, 63.0)   # tightened to the data: 99.99% of detections fall inside
@@ -473,32 +472,6 @@ def main():
     comp.sort(key=lambda d: -d["fs"])
     log(f"{len(comp):,} complexes, {sum(1 for c in comp if c['act']):,} active in last 24 h")
 
-    # ---- newest detections, drawn individually regardless of clustering ----
-    # A fire needs MIN_CLUSTER detections within LINK_KM to become a complex, and the
-    # median wait from first detection to fifth is under two hours but the upper quartile
-    # runs past a day. Without this layer a fire seen once on the latest pass would appear
-    # only as a faint density cell, which would make the map quietly older than the data.
-    # Anchored to the newest observation, not to build time: if the upstream feed lags
-    # more than RECENT_H the layer would otherwise silently empty out, which is exactly
-    # when a reader most needs to see what the latest pass found.
-    rec_cut = max(r["t"] for r in f7_all) - timedelta(hours=RECENT_H)
-    recent = []
-    orphan = 0
-    for i, r in enumerate(f7):
-        if r["t"] < rec_cut:
-            continue
-        new = i not in in_complex
-        orphan += new
-        x, y = to_px(r["lon"], r["lat"])
-        recent.append([round(x, 1), round(y, 1), bucket(r["frp"]), 1 if new else 0])
-    for r in f7_all:
-        if r["an"] or r["t"] < rec_cut:
-            continue
-        x, y = to_px(r["lon"], r["lat"])
-        recent.append([round(x, 1), round(y, 1), bucket(r["frp"]), 0])
-    log(f"newest {RECENT_H} h of observations (since {rec_cut:%d %b %H:%M}Z): "
-        f"{len(recent):,} detections drawn individually, {orphan:,} not yet in any complex")
-
     # country table
     agg = {}
     for r in r7:
@@ -600,11 +573,10 @@ def main():
             "W": W, "H": H, "breaks": FRP_BREAKS,
             "age_min": age_min, "gap_max": gap_max, "plats": plats,
             "n7_all": len(r7_all), "n_modis": len(r7_all) - len(r7),
-            "recent_h": RECENT_H, "n_recent": len(recent), "n_orphan": orphan,
             "stale_h": STALE_PLATFORM_H,
         },
         "paths": paths, "frame": frame, "dots": dots, "comp": comp, "countries": countries,
-        "classes": classes, "top5": top5, "recent": recent,
+        "classes": classes, "top5": top5,
     }
 
     with open(os.path.join(HERE, "template.html")) as f:
@@ -613,8 +585,7 @@ def main():
         raise SystemExit("FATAL: template.html has no /*PAYLOAD*/ marker")
     # The template advertises counts for layers it must also draw. A silent mismatch
     # ships a page that asserts marks nobody can see, so fail the build instead.
-    for token, why in (("FIRE.recent", "newest-detection layer"),
-                       ("FIRE.top5", "intensity ranking"),
+    for token, why in (("FIRE.top5", "intensity ranking"),
                        ("FIRE.classes", "class breakdown"),
                        ("FIRE.comp", "complex marks"),
                        ("FIRE.dots", "density layer")):

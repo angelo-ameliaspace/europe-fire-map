@@ -158,11 +158,8 @@ h1.kicker { margin:0; }
 #marks .m:focus-visible { outline:2px solid var(--brand); outline-offset:1px; }
 label:focus-within { outline:2px solid var(--brand); outline-offset:2px; }
 #marks .hidden { display:none; }
-#marks .rc { fill:none; stroke:var(--live); stroke-width:1.15; stroke-linejoin:round;
-             pointer-events:none; opacity:.9; }
-#marks .rc.fresh-new { fill:var(--live); }
-#marks .rch { fill:none; stroke:var(--bg); stroke-width:2.4; stroke-linejoin:round;
-              pointer-events:none; opacity:.75; }
+#marks .off { display:none; }
+.filters .sep { width:1px; align-self:stretch; background:var(--rule); margin:0 .2rem; }
 .badges circle { fill:var(--panel); stroke:var(--ink); stroke-width:1.2; }
 .badges text { font-family:var(--mono); font-size:11px; font-weight:600; fill:var(--ink);
                text-anchor:middle; }
@@ -519,23 +516,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       'class="m ' + d.cls + ' ' + (d.act ? 'live' : 'quiet')
       + '" tabindex="0" role="button" data-i="' + i + '"');
   }).join('');
-  // Every detection in the newest window, drawn individually. A fire needs
-  // MIN_CLUSTER detections within LINK_KM to become a complex; until then it would
-  // otherwise show only as a faint density cell.
-  function diamond(x, y, r) {
-    return 'M' + x + ' ' + (y - r) + 'L' + (x + r) + ' ' + y
-      + 'L' + x + ' ' + (y + r) + 'L' + (x - r) + ' ' + y + 'Z';
-  }
-  svg += '<g class="rcwrap">'
-    + FIRE.recent.map(function (d) {
-        return '<path class="rch" d="' + diamond(d[0], d[1], d[3] ? 3.6 : 2.9) + '"/>';
-      }).join('')
-    + FIRE.recent.map(function (d) {
-        return '<path class="rc' + (d[3] ? ' fresh-new' : '') + '" d="'
-          + diamond(d[0], d[1], d[3] ? 3.6 : 2.9) + '"/>';
-      }).join('')
-    + '</g>';
-
   svg += '<g class="badges" aria-hidden="true">' + FIRE.top5.map(function (d, i) {
     var r = rad(d);
     var bx = Math.max(12, Math.min(d.x + r + 10, W - 12));
@@ -558,32 +538,55 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
         + fmt(Math.round(d.fm24 || d.fm)) + ' MW</span></a>';
     }).join('');
 
-  /* ---- filters ---- */
+  /* ---- filters: status first, then type ----
+     Persistent heat sources are all "active" by definition - they reappear on every
+     pass - so they permanently occupied a third of the active marks for a twentieth of
+     the radiative power. They and the quiet complexes are off by default; the density
+     layer behind still carries the full seven days. */
+  var show = { live: 1, quiet: 0, wildfire: 1, agricultural: 1, industrial: 0 };
+  var marks = $('marks');
+
+  function applyFilters() {
+    CLS.forEach(function (c) {
+      ['live', 'quiet'].forEach(function (st) {
+        var on = show[c] && show[st];
+        Array.prototype.forEach.call(marks.querySelectorAll('.' + c + '.' + st), function (n) {
+          n.classList.toggle('off', !on);
+        });
+      });
+    });
+  }
+
   var fl = $('filters');
-  FIRE.classes.forEach(function (c) {
+  function addToggle(key, label, count, markSvg) {
     var l = document.createElement('label');
-    l.className = 'f';
-    l.innerHTML = '<input type="checkbox" checked data-k="' + c.key + '">'
-      + keyMark(c.key, 13, c.key === 'industrial' ? 4.4 : 5) + c.label + ' (' + fmt(c.cx) + ')';
+    l.className = 'f' + (show[key] ? '' : ' off');
+    l.innerHTML = '<input type="checkbox"' + (show[key] ? ' checked' : '')
+      + ' data-k="' + key + '">' + (markSvg || '') + label
+      + (count == null ? '' : ' (' + fmt(count) + ')');
     fl.appendChild(l);
+  }
+  var nLive = comp.filter(function (d) { return d.act; }).length;
+  addToggle('live', 'Burning, last 24 h', nLive,
+    '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">'
+    + '<circle cx="6.5" cy="6.5" r="4.6" fill="var(--r3)" stroke="var(--panel)"'
+    + ' stroke-width="1.3"/></svg>');
+  addToggle('quiet', 'Quiet, within 7 days', comp.length - nLive,
+    '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">'
+    + '<circle cx="6.5" cy="6.5" r="4.6" fill="var(--r3)" opacity=".4"/></svg>');
+  var sep = document.createElement('span'); sep.className = 'sep'; fl.appendChild(sep);
+  FIRE.classes.forEach(function (c) {
+    addToggle(c.key, c.label, c.cx, keyMark(c.key, 13, c.key === 'industrial' ? 4.4 : 5));
   });
-  var rl = document.createElement('label');
-  rl.className = 'f';
-  rl.innerHTML = '<input type="checkbox" checked data-k="rc">'
-    + '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">'
-    + '<path d="M6.5 1.6L11.4 6.5L6.5 11.4L1.6 6.5Z" fill="var(--live)"/></svg>'
-    + 'Newest ' + M.recent_h + ' h (' + fmt(M.n_recent) + ')';
-  fl.appendChild(rl);
 
   fl.addEventListener('change', function (e) {
     var k = e.target.dataset.k;
     if (!k) return;
+    show[k] = e.target.checked ? 1 : 0;
     e.target.closest('.f').classList.toggle('off', !e.target.checked);
-    var sel = k === 'rc' ? '.rc, .rch' : '.' + k;
-    Array.prototype.forEach.call($('marks').querySelectorAll(sel), function (n) {
-      n.classList.toggle('hidden', !e.target.checked);
-    });
+    applyFilters();
   });
+  applyFilters();
 
   /* ---- tooltip ---- */
   var tip = $('tip'), stage = $('stage');
@@ -633,12 +636,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   $('lg-shape').innerHTML = FIRE.classes.map(function (c) {
     return '<span>' + keyMark(c.key, 14, c.key === 'industrial' ? 4.6 : 5.2) + c.label + '</span>';
   }).join('')
-    + '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">'
-    + '<path d="M7 2.2L11.8 7L7 11.8L2.2 7Z" fill="none" stroke="var(--live)"'
-    + ' stroke-width="1.2"/></svg>Detected in last ' + M.recent_h + ' h</span>'
-    + '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">'
-    + '<path d="M7 2.2L11.8 7L7 11.8L2.2 7Z" fill="var(--live)"/></svg>'
-    + 'New — no complex yet</span>'
     + '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">'
     + '<rect x="4" y="4" width="2.4" height="2.4" fill="var(--r1)"/>'
     + '<rect x="8" y="7" width="2.4" height="2.4" fill="var(--r2)"/>'

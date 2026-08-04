@@ -54,18 +54,17 @@ claim, the country comparison in the bar-table lede, the map callout, the as-of 
 and the out-of-frame percentage. **Do not hardcode a country name, a percentage or a
 date into the prose**; it will go stale on the next refresh and start lying.
 
-## The newest detections always appear
+## What the map shows by default
 
-A fire needs `MIN_CLUSTER` detections within `LINK_KM` before it becomes a complex, and
-measured against a week of real data the median wait from first detection to fifth is about
-1.7 h — but the upper quartile runs past a day. Without help, a fire seen once on the latest
-pass would show only as a faint density cell: no mark, no ranking, no class.
+Two filter axes, status and type, combined: a mark is drawn only if both allow it.
+Defaults are `Burning last 24 h` on, `Quiet within 7 days` off, wildfire and short-lived
+on, persistent heat source off. That is 257 of 978 complexes.
 
-So every detection inside the newest `RECENT_H` hours of *observation* is drawn individually
-as a diamond, with the ones belonging to no complex filled solid. The window is anchored to
-the newest observation rather than to build time — anchored to the clock, a feed lagging more
-than `RECENT_H` would silently empty the layer at precisely the moment a reader most needs
-to see what the last pass found.
+The reason for the persistent default is measured: all 147 persistent sources count as
+active every single pass, because that is what makes them persistent. They occupied 36% of
+the active marks while carrying 4.9% of the radiative power, and they are infrastructure
+rather than events. The background density layer still carries all seven days of detections
+regardless of any filter, which is what answers "what has burnt this week".
 
 ## Two sensors, one analysis
 
