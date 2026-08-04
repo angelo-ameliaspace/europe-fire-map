@@ -249,6 +249,8 @@ tbody tr:hover { background:var(--sunk); }
 .note p:last-child { margin-bottom:0; }
 .note h3 + p { margin-top:0; }
 .note.warn { border-left:3px solid var(--live); }
+.note.full { border:1px solid var(--rule); border-left:3px solid var(--live); }
+.note.full p { max-width:96ch; }
 code { font-family:var(--mono); font-size:.9em; background:var(--sunk);
        padding:.06em .3em; word-break:break-all; }
 footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1);
@@ -274,17 +276,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       <span class="stamp"><b>As of</b><span class="dot"></span><span id="p-asof"></span></span>
     </div>
 
-    <div class="fresh">
-      <span class="lbl">Data age</span>
-      <span class="age" id="p-age"></span>
-      <span class="plats" id="p-plats"></span>
-      <span class="note2" id="p-fresh"></span>
-    </div>
-
-    <p class="caveat"><span class="lbl">Caveat</span><span><b>Not for emergency use.</b>
-      Near-real-time detections are provisional and are revised when the standard-quality
-      product is processed. For operational information consult EFFIS or your national civil
-      protection service.</span></p>
 
   </div>
 
@@ -375,21 +366,15 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
 
   <section>
     <h2>How to read this, and what it does not say</h2>
+    <div class="note warn full">
+      <h3>Not an emergency product</h3>
+      <p>This is an analytical view of satellite thermal detections, not a fire warning service.
+        It is unvalidated, not continuous and not authoritative. For operational information use
+        the European Forest Fire Information System, your national civil protection service, or
+        the emergency number 112.</p>
+    </div>
+
     <div class="notes">
-      <div class="note warn">
-        <h3>Not an emergency product</h3>
-        <p>This is an analytical view of satellite thermal detections, not a fire warning service.
-          It is unvalidated, not continuous and not authoritative. For operational information use
-          the European Forest Fire Information System, your national civil protection service, or
-          the emergency number 112.</p>
-        <h3>The classification is a heuristic</h3>
-        <p id="p-rules"></p>
-        <p>It takes no land-cover input, so an intense agricultural fire can be labelled wildfire
-          and a slow-burning peat fire can be labelled a persistent heat source. It was checked
-          against known geography — Algerian gas flaring, Ukrainian crop residue, Iberian and Greek
-          wildfire — and behaves sensibly on all four. That is evidence of usefulness, not proof of
-          correctness.</p>
-      </div>
       <div class="note">
         <h3>Detections are not fires</h3>
         <p>A 375 m pixel flags a thermal anomaly. One fire generates many detections across many
@@ -399,40 +384,53 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
           extent. Burned area needs post-fire optical mapping — Sentinel-2 dNBR — or the official
           EFFIS perimeters.</p>
         <h3>Gaps are invisible</h3>
-        <p>Smoke and cloud block detection, and each satellite passes roughly twice daily, so a
-          fire that ignited and was contained between overpasses never appears. Absence of
-          detections is not evidence of absence of fire.</p>
+        <p>Smoke and cloud block detection, and the newest detections may not yet have formed a
+          complex, so absence of a mark is not evidence of absence of fire.</p>
+        <h3>Coverage</h3>
+        <p>The frame spans 25°W–40°E, 34–64°N, excluding <span id="p-out"></span>% of detections,
+          which are still counted in every figure. Seven days is the cap on NASA's open feeds.</p>
+      </div>
+      <div class="note">
+        <h3>The classification is a heuristic</h3>
+        <p id="p-rules"></p>
+        <p>It takes no land-cover input, so an intense agricultural fire can be labelled wildfire
+          and a slow-burning peat fire can be labelled a persistent heat source. It was checked
+          against known geography — Algerian gas flaring, Ukrainian crop residue, Iberian and Greek
+          wildfire — and behaves sensibly on all four. That is evidence of usefulness, not proof of
+          correctness.</p>
         <h3>Two sensors, one analysis</h3>
         <p>Clustering, classification, radiative-power totals and the country table use VIIRS
-          375 m only. MODIS at 1 km is fetched as well, but solely to tighten coverage: Terra and
-          Aqua add four passes a day and more than halve the longest gap with nobody looking. Its
-          detections appear in the background density layer and in the freshness figures, never in
-          the totals — a 1 km footprint is seven times coarser, its detection threshold is higher,
-          and the classification thresholds are calibrated on VIIRS radiative power. Mixing them
-          would move every headline number without saying so.</p>
-        <h3>Coverage</h3>
-        <p>The frame spans 25°W–40°E, 33–64°N, excluding <span id="p-out"></span>% of detections,
-          which are still counted in every figure. Seven days is the cap on NASA's open feeds.</p>
+          375 m only. MODIS at 1 km is fetched as well, solely to tighten coverage: Terra and Aqua
+          add four passes a day and more than halve the longest gap with nobody looking. Its
+          detections appear in the density layer and the freshness figures, never in the totals — a
+          1 km footprint is seven times coarser and the thresholds are calibrated on VIIRS power.</p>
         <h3>What "Europe" means here</h3>
         <p>NASA's regional feed is named "Europe" but reaches across the Mediterranean into the
-          Maghreb. African detections are excluded from every figure on this page, including the
-          density layer, the classification totals and the country table. The African coastline is
-          still drawn, because a map of the Mediterranean without its southern shore reads as
-          broken rather than as scoped.</p>
-        <p>Countries Natural Earth classes as Asia — Turkey, Cyprus, the Caucasus — are retained.
-          Turkey alone is among the largest contributors of radiative power in the basin, and
-          excluding Anatolia would say more about where a boundary was drawn than about where
-          things are burning. Any entry outside Europe is labelled with its continent wherever it
-          is named individually.</p>
+          Maghreb. African detections are excluded from every figure. The African coastline is still
+          drawn, because a map of the Mediterranean without its southern shore reads as broken
+          rather than as scoped. Countries Natural Earth classes as Asia — Turkey, Cyprus, the
+          Caucasus — are retained and labelled.</p>
       </div>
     </div>
+
+    <div class="fresh">
+      <span class="lbl">Data age</span>
+      <span class="age" id="p-age"></span>
+      <span class="plats" id="p-plats"></span>
+      <span class="note2" id="p-fresh"></span>
+    </div>
+
+    <p class="caveat"><span class="lbl">Caveat</span><span><b>Not for emergency use.</b>
+      Near-real-time detections are provisional and are revised when the standard-quality
+      product is processed. For operational information consult EFFIS or your national civil
+      protection service.</span></p>
   </section>
 
   <footer>
     We acknowledge the use of data and imagery from LANCE FIRMS, operated by NASA/GSFC/ESDIS with
     funding provided by NASA/HQ. VIIRS 375 m active fire product, Collection 2, near-real-time —
     provisional and subject to revision. Boundaries: Natural Earth 1:50 m, public domain.
-    Typography: IBM Plex Mono and Archivo, SIL Open Font License 1.1.
+    Typography: Inter, SIL Open Font License 1.1.
     Retrieved <span id="p-foot"></span>.
   </footer>
 </div>
