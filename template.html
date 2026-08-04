@@ -66,28 +66,7 @@ h1.kicker { margin:0; }
          padding:.8rem 0; border-top:1px solid var(--hair);
          border-bottom:1px solid var(--hair); }
 .instr b { color:var(--ink2); font-weight:600; }
-.fresh { display:grid; grid-template-columns:auto auto 1fr; gap:.4rem 1.4rem;
-          align-items:baseline; padding:.85rem 0; border-top:1px solid var(--rule);
-          border-bottom:1px solid var(--rule); }
-.fresh .age { font-family:var(--mono); font-size:var(--t5); font-weight:600;
-              letter-spacing:-.02em; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.plats { display:flex; flex-wrap:wrap; gap:.35rem .5rem; }
-.plat { display:inline-flex; align-items:baseline; gap:.4rem; font-family:var(--sans);
-        font-size:var(--t1); font-weight:600; letter-spacing:.03em; color:var(--ink2);
-        border:1px solid var(--rule); padding:.1rem .45rem; white-space:nowrap; }
-.plat s { text-decoration:none; font-family:var(--mono); font-weight:600; color:var(--ink3);
-          font-variant-numeric:tabular-nums; }
-.plat.stale { color:var(--live); border-color:var(--live); }
-.plat.coverage { border-style:dashed; }
-.plat.stale s { color:var(--live); }
-.fresh .note2 { grid-column:2 / -1; font-size:var(--t2); color:var(--ink3); max-width:92ch; }
-.fresh .note2 b { color:var(--ink2); font-weight:600; }
-.caveat { display:grid; grid-template-columns:auto 1fr; gap:.9rem; align-items:baseline;
-          font-size:var(--t2); color:var(--ink2); border-left:3px solid var(--live);
-          padding:.15rem 0 .15rem .9rem; margin:0; max-width:88ch; }
-.caveat b { color:var(--ink); font-weight:600; }
-@media (max-width:760px) { .fresh { grid-template-columns:1fr; }
-  .fresh .note2 { grid-column:1; } }
+}
 .classes { display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
            background:var(--rule); border:1px solid var(--rule); }
 .cls { background:var(--panel); padding:1.15rem 1.2rem; display:flex;
@@ -402,8 +381,9 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
         <p>Clustering, classification, radiative-power totals and the country table use VIIRS
           375 m only. MODIS at 1 km is fetched as well, solely to tighten coverage: Terra and Aqua
           add four passes a day and more than halve the longest gap with nobody looking. Its
-          detections appear in the density layer and the freshness figures, never in the totals — a
-          1 km footprint is seven times coarser and the thresholds are calibrated on VIIRS power.</p>
+          detections appear in the density layer and among the newest detections, never in the
+          totals — a 1 km footprint is seven times coarser and the thresholds are calibrated on
+          VIIRS radiative power.</p>
         <h3>What "Europe" means here</h3>
         <p>NASA's regional feed is named "Europe" but reaches across the Mediterranean into the
           Maghreb. African detections are excluded from every figure. The African coastline is still
@@ -413,17 +393,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       </div>
     </div>
 
-    <div class="fresh">
-      <span class="lbl">Data age</span>
-      <span class="age" id="p-age"></span>
-      <span class="plats" id="p-plats"></span>
-      <span class="note2" id="p-fresh"></span>
-    </div>
-
-    <p class="caveat"><span class="lbl">Caveat</span><span><b>Not for emergency use.</b>
-      Near-real-time detections are provisional and are revised when the standard-quality
-      product is processed. For operational information consult EFFIS or your national civil
-      protection service.</span></p>
   </section>
 
   <footer>
@@ -476,29 +445,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   /* ---- masthead ---- */
   $('p-win').textContent = M.win7[0] + ' – ' + M.win7[1];
   $('p-asof').textContent = M.retrieved;
-  var h = Math.floor(M.age_min / 60), mn = M.age_min % 60;
-  $('p-age').textContent = (h ? h + ' h ' : '') + mn + ' min';
-  $('p-plats').innerHTML = M.plats.map(function (p) {
-    return '<span class="plat' + (p.stale ? ' stale' : '')
-      + (p.sensor === 'MODIS' ? ' coverage' : '') + '">' + p.name
-      + '<s>' + p.lag_h.toFixed(1) + ' h</s>' + (p.stale ? '<s>STALE</s>' : '') + '</span>';
-  }).join('');
-  var stale = M.plats.filter(function (p) { return p.stale; });
-  $('p-fresh').innerHTML = 'Rebuilt hourly, but freshness is set upstream: NASA processes '
-    + 'near-real-time detections about three hours after observation. Five platforms across two '
-    + 'sensors give roughly ten passes a day, which holds the longest unobserved gap in this '
-    + 'window to <b>' + M.gap_max.toFixed(1) + ' hours</b>. Nothing here can be fresher than that. '
-    + 'Dashed chips are MODIS at 1 km, carried for coverage only — the analysis runs on the '
-    + fmt(M.n7) + ' VIIRS detections at 375 m. Every one of the <b>' + fmt(M.n_recent)
-    + ' detections from the newest ' + M.recent_h + ' hours of observation</b> is drawn '
-    + 'individually on the map, '
-    + 'including the <b>' + fmt(M.n_orphan) + '</b> too new to have formed a complex yet — a fire '
-    + 'needs five detections within 3 km before it can be clustered, ranked or classified.'
-    + (stale.length
-        ? ' <b>' + stale.map(function (p) { return p.name; }).join(' and ')
-          + ' ' + (stale.length > 1 ? 'feeds are' : 'feed is') + ' currently degraded</b> — no new '
-          + 'detections for over ' + M.stale_h + ' hours, so coverage is thinner than usual.'
-        : ' All three platform feeds are current.');
   $('p-out').textContent = M.outpct;
   $('p-foot').textContent = M.retrieved;
 
