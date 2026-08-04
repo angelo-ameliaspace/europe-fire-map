@@ -185,6 +185,38 @@ def to_km(lon, lat):
 
 
 # ---------------------------------------------------------------- countries
+def load_places():
+    """Natural Earth populated places inside the frame, pre-projected to the km plane."""
+    with open(os.path.join(HERE, "places.json"), encoding="utf-8") as f:
+        rows = json.load(f)
+    out = []
+    for nm, adm, la, lo, pop in rows:
+        kx, ky = to_km(lo, la)
+        out.append((nm, adm, la, lo, pop, kx, ky))
+    return out
+
+
+COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+           "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+
+
+def nearest_place(lon, lat, places):
+    """Closest settlement, with distance in km and the compass bearing from it."""
+    kx, ky = to_km(lon, lat)
+    best, bd = None, None
+    for pl in places:
+        d = (kx - pl[5]) ** 2 + (ky - pl[6]) ** 2
+        if bd is None or d < bd:
+            bd, best = d, pl
+    dist = math.sqrt(bd)
+    dlon = math.radians(lon - best[3])
+    y = math.sin(dlon) * math.cos(math.radians(lat))
+    x = (math.cos(math.radians(best[2])) * math.sin(math.radians(lat))
+         - math.sin(math.radians(best[2])) * math.cos(math.radians(lat)) * math.cos(dlon))
+    brg = (math.degrees(math.atan2(y, x)) + 360) % 360
+    return best[0], best[1], round(dist, 1), COMPASS[int((brg + 11.25) % 360 // 22.5)], best[4]
+
+
 def load_boundaries():
     with open(os.path.join(HERE, "boundaries.json")) as f:
         return json.load(f)
@@ -318,6 +350,8 @@ def main():
         raise SystemExit(f"FATAL: only {len(r7)} 7-day detections — feed looks broken, refusing to publish")
 
     bnd = load_boundaries()
+    places = load_places()
+    log(f"gazetteer: {len(places):,} settlements in frame")
     attribute(r7, bnd)
     attribute(r24, bnd)
 
@@ -356,14 +390,18 @@ def main():
                      max(k[1] for k in km) - min(k[1] for k in km))
         days = len({r["t"].date() for r in rs})
         fmax = max(r["frp"] for r in rs)
+        rs24 = [r for r in rs if r["t"] >= cut]
+        fmax24 = round(max((r["frp"] for r in rs24), default=0.0), 1)
         cls = classify(fmax, days, spread)
+        pnm, padm, pdist, pbrg, ppop = nearest_place(lon, lat, places)
         comp.append({
             "x": round(x, 1), "y": round(y, 1), "n": len(rs),
             "fs": round(sum(r["frp"] for r in rs)), "fm": round(fmax, 1),
             "c": name, "act": n24 > 0, "n24": n24,
             "fp": round(hull_area_ha(km)),
             "b": bucket(fmax),
-            "cls": cls, "days": days, "spread": round(spread, 1),
+            "cls": cls, "days": days, "spread": round(spread, 1), "fm24": fmax24,
+            "pl": pnm, "pdist": pdist, "pbrg": pbrg, "ppop": ppop,
             "night": round(sum(1 for r in rs if r["dn"] == "N") / len(rs), 2),
             "lat": round(lat, 3), "lon": round(lon, 3),
             "t0": uk_bare(min(r["t"] for r in rs), "%d %b %H:%M"),
@@ -428,7 +466,14 @@ def main():
         log(f"  {cl['label']:24s} {cl['cx']:5d} complexes  {cl['det']:6d} det  "
             f"{cl['frp']:8d} MW  ({cl['frp_pct']}% of power, {cl['det_pct']}% of detections)")
 
-    top5 = sorted(comp, key=lambda d: -d["fm"])[:5]
+    act = [c for c in comp if c["act"]]
+    top5 = sorted(act, key=lambda d: (-d["fm24"], -d["fs"]))[:5]
+    if len(top5) < 5:                      # nothing active: fall back to the week
+        top5 = sorted(comp, key=lambda d: -d["fm"])[:5]
+        log("  WARNING: fewer than 5 active complexes; top5 falls back to 7-day peak")
+    for i, c in enumerate(top5):
+        log(f"  #{i+1} {c['pl']} ({c['c']}) {c['pdist']} km {c['pbrg']} — "
+            f"24h peak {c['fm24']} MW, {c['cls']}")
 
     now = datetime.now(timezone.utc)
     payload = {
