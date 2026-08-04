@@ -127,7 +127,7 @@ h1.kicker { margin:0; }
               user-select:none; }
 .filters input { accent-color:var(--brand); margin:0; }
 .filters .f.off { color:var(--ink3); }
-.mapstage { position:relative; width:100%; aspect-ratio:1160/760; background:var(--sunk); }
+.mapstage { position:relative; width:100%; aspect-ratio:1160/889; background:var(--sunk); }
 .wordmark { position:absolute; bottom:1rem; left:1rem; z-index:5; width:132px;
             aspect-ratio:2448/432; background:var(--wordmark) no-repeat center/contain;
             opacity:.72; }
@@ -261,10 +261,10 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   <div class="mapcard">
     <div class="filters" id="filters"><span class="lbl">Show</span></div>
     <div class="mapstage" id="stage">
-      <svg id="basemap" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"
+      <svg id="basemap" viewBox="0 0 1160 889" preserveAspectRatio="xMidYMid meet"
            role="img" aria-label="Map of Europe showing thermal anomaly detections"></svg>
       <canvas id="dots"></canvas>
-      <svg id="marks" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="marks" viewBox="0 0 1160 889" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="maprank" id="maprank"></div>
       <div class="wordmark" role="img" aria-label="Amelia Space"></div>
       <div class="tip" id="tip" role="status" aria-live="polite"></div>
@@ -365,9 +365,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
         <h3>Gaps are invisible</h3>
         <p>Smoke and cloud block detection, and the newest detections may not yet have formed a
           complex, so absence of a mark is not evidence of absence of fire.</p>
-        <h3>Coverage</h3>
-        <p>The frame spans 25°W–40°E, 34–64°N, excluding <span id="p-out"></span>% of detections,
-          which are still counted in every figure. Seven days is the cap on NASA's open feeds.</p>
       </div>
       <div class="note">
         <h3>The classification is a heuristic</h3>
@@ -384,12 +381,10 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
           detections appear in the density layer and among the newest detections, never in the
           totals — a 1 km footprint is seven times coarser and the thresholds are calibrated on
           VIIRS radiative power.</p>
-        <h3>What "Europe" means here</h3>
-        <p>NASA's regional feed is named "Europe" but reaches across the Mediterranean into the
-          Maghreb. African detections are excluded from every figure. The African coastline is still
-          drawn, because a map of the Mediterranean without its southern shore reads as broken
-          rather than as scoped. Countries Natural Earth classes as Asia — Turkey, Cyprus, the
-          Caucasus — are retained and labelled.</p>
+        <h3>Coverage</h3>
+        <p>The frame spans 11°W–37°E, 34–63°N, tightened to the data — it excludes
+          <span id="p-out"></span>% of detections, which are still counted in every figure. Seven
+          days is the cap on NASA's open feeds, and African detections are excluded throughout.</p>
       </div>
     </div>
 

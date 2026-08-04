@@ -34,9 +34,9 @@ MODIS_MIN_CONF = 30      # MODIS confidence is 0-100, not low/nominal/high
 RECENT_H = 6             # every detection this new is drawn individually, clustered or not
 
 # map frame (drawn) and projection constants
-BB = (-25.0, 34.0, 40.0, 64.0)
+BB = (-11.0, 34.0, 37.0, 63.0)   # tightened to the data: 99.99% of detections fall inside
 LON0, PH1, PH2, PH0 = 13.0, 40.0, 60.0, 50.0
-W, H = 1160.0, 760.0
+W, H = 1160.0, 889.0             # H matched to the projected aspect of BB
 GRID_DEG = 0.03          # density-layer cell size
 LINK_KM = 3.0            # single-linkage distance for complexes
 MIN_CLUSTER = 5          # detections required to be called a complex
