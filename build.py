@@ -237,11 +237,13 @@ def in_ring(x, y, ring):
 
 def attribute(rows, bnd):
     names, bbs, polys = bnd["names"], bnd["bbox"], bnd["polys"]
+    conts = bnd.get("cont", [""] * len(names))
     order = sorted(range(len(names)), key=lambda i: -sum(len(r) for r in polys[i]))
     hit = 0
     for r in rows:
         x, y = r["lon"], r["lat"]
         r["country"] = None
+        r["cont"] = None
         for i in order:
             b = bbs[i]
             if not (b[0] <= x <= b[2] and b[1] <= y <= b[3]):
@@ -249,6 +251,7 @@ def attribute(rows, bnd):
             for ring in polys[i]:
                 if in_ring(x, y, ring):
                     r["country"] = names[i]
+                    r["cont"] = conts[i]
                     break
             if r["country"]:
                 break
@@ -381,6 +384,7 @@ def main():
             if r["country"]:
                 cs[r["country"]] = cs.get(r["country"], 0) + 1
         name = max(cs, key=cs.get) if cs else "offshore / unattributed"
+        cont = next((r["cont"] for r in rs if r["country"] == name), None) or ""
         lat = sum(r["lat"] for r in rs) / len(rs)
         lon = sum(r["lon"] for r in rs) / len(rs)
         x, y = to_px(lon, lat)
@@ -402,6 +406,7 @@ def main():
             "b": bucket(fmax),
             "cls": cls, "days": days, "spread": round(spread, 1), "fm24": fmax24,
             "pl": pnm, "pdist": pdist, "pbrg": pbrg, "ppop": ppop,
+            "cont": cont, "eu": cont == "Europe",
             "night": round(sum(1 for r in rs if r["dn"] == "N") / len(rs), 2),
             "lat": round(lat, 3), "lon": round(lon, 3),
             "t0": uk_bare(min(r["t"] for r in rs), "%d %b %H:%M"),
@@ -472,8 +477,11 @@ def main():
         top5 = sorted(comp, key=lambda d: -d["fm"])[:5]
         log("  WARNING: fewer than 5 active complexes; top5 falls back to 7-day peak")
     for i, c in enumerate(top5):
-        log(f"  #{i+1} {c['pl']} ({c['c']}) {c['pdist']} km {c['pbrg']} — "
+        log(f"  #{i+1} {c['pl']} ({c['c']}, {c['cont'] or '?'}) {c['pdist']} km {c['pbrg']} — "
             f"24h peak {c['fm24']} MW, {c['cls']}")
+    eu5 = sorted([c for c in act if c["eu"]], key=lambda d: (-d["fm24"], -d["fs"]))[:5]
+    log("  Europe-only equivalent: "
+        + ", ".join(f"{c['pl']} ({c['c']}) {c['fm24']:.0f} MW" for c in eu5))
 
     now = datetime.now(timezone.utc)
     payload = {
