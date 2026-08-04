@@ -179,6 +179,11 @@ h1.kicker { margin:0; }
 #marks .m:focus-visible { outline:2px solid var(--brand); outline-offset:1px; }
 label:focus-within { outline:2px solid var(--brand); outline-offset:2px; }
 #marks .hidden { display:none; }
+#marks .rc { fill:none; stroke:var(--live); stroke-width:1.7; stroke-linejoin:round;
+             pointer-events:none; }
+#marks .rc.fresh-new { fill:var(--live); }
+#marks .rch { fill:none; stroke:var(--bg); stroke-width:3.6; stroke-linejoin:round;
+              pointer-events:none; opacity:.85; }
 .badges circle { fill:var(--panel); stroke:var(--ink); stroke-width:1.2; }
 .badges text { font-family:var(--mono); font-size:11px; font-weight:600; fill:var(--ink);
                text-anchor:middle; }
@@ -486,7 +491,11 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
     + 'sensors give roughly ten passes a day, which holds the longest unobserved gap in this '
     + 'window to <b>' + M.gap_max.toFixed(1) + ' hours</b>. Nothing here can be fresher than that. '
     + 'Dashed chips are MODIS at 1 km, carried for coverage only — the analysis runs on the '
-    + fmt(M.n7) + ' VIIRS detections at 375 m.'
+    + fmt(M.n7) + ' VIIRS detections at 375 m. Every one of the <b>' + fmt(M.n_recent)
+    + ' detections from the newest ' + M.recent_h + ' hours of observation</b> is drawn '
+    + 'individually on the map, '
+    + 'including the <b>' + fmt(M.n_orphan) + '</b> too new to have formed a complex yet — a fire '
+    + 'needs five detections within 3 km before it can be clustered, ranked or classified.'
     + (stale.length
         ? ' <b>' + stale.map(function (p) { return p.name; }).join(' and ')
           + ' ' + (stale.length > 1 ? 'feeds are' : 'feed is') + ' currently degraded</b> — no new '
@@ -602,11 +611,20 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       + keyMark(c.key, 13, c.key === 'industrial' ? 4.4 : 5) + c.label + ' (' + fmt(c.cx) + ')';
     fl.appendChild(l);
   });
+  var rl = document.createElement('label');
+  rl.className = 'f';
+  rl.innerHTML = '<input type="checkbox" checked data-k="rc">'
+    + '<svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">'
+    + '<path d="M6.5 1.6L11.4 6.5L6.5 11.4L1.6 6.5Z" fill="var(--live)"/></svg>'
+    + 'Newest ' + M.recent_h + ' h (' + fmt(M.n_recent) + ')';
+  fl.appendChild(rl);
+
   fl.addEventListener('change', function (e) {
     var k = e.target.dataset.k;
     if (!k) return;
     e.target.closest('.f').classList.toggle('off', !e.target.checked);
-    Array.prototype.forEach.call($('marks').querySelectorAll('.' + k), function (n) {
+    var sel = k === 'rc' ? '.rc, .rch' : '.' + k;
+    Array.prototype.forEach.call($('marks').querySelectorAll(sel), function (n) {
       n.classList.toggle('hidden', !e.target.checked);
     });
   });
@@ -658,7 +676,18 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
     .join('') + '<span>MW</span>';
   $('lg-shape').innerHTML = FIRE.classes.map(function (c) {
     return '<span>' + keyMark(c.key, 14, c.key === 'industrial' ? 4.6 : 5.2) + c.label + '</span>';
-  }).join('');
+  }).join('')
+    + '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">'
+    + '<path d="M7 2.2L11.8 7L7 11.8L2.2 7Z" fill="none" stroke="var(--live)"'
+    + ' stroke-width="1.2"/></svg>Detected in last ' + M.recent_h + ' h</span>'
+    + '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">'
+    + '<path d="M7 2.2L11.8 7L7 11.8L2.2 7Z" fill="var(--live)"/></svg>'
+    + 'New — no complex yet</span>'
+    + '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">'
+    + '<rect x="4" y="4" width="2.4" height="2.4" fill="var(--r1)"/>'
+    + '<rect x="8" y="7" width="2.4" height="2.4" fill="var(--r2)"/>'
+    + '<rect x="5" y="9" width="2.4" height="2.4" fill="var(--r0)"/></svg>'
+    + 'All detections, 7 days (always shown)</span>';
   var sh = '';
   [500, 8000, maxFs].forEach(function (v, i) {
     var r = 2.1 + 20 * Math.pow(v / maxFs, .42), cxp = 27 + i * 64;

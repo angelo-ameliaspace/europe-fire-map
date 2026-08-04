@@ -31,6 +31,7 @@ SATS = [
     ("modis-c6.1",         "MODIS_C6_1",     "Terra/Aqua", "MODIS", False),
 ]
 MODIS_MIN_CONF = 30      # MODIS confidence is 0-100, not low/nominal/high
+RECENT_H = 6             # every detection this new is drawn individually, clustered or not
 
 # map frame (drawn) and projection constants
 BB = (-25.0, 34.0, 40.0, 64.0)
@@ -415,6 +416,8 @@ def main():
     log(f"{len(r7)-len(f7):,} of {len(r7):,} detections outside map frame "
         f"({100*(len(r7)-len(f7))/len(r7):.1f}%)")
 
+    now_utc = datetime.now(timezone.utc)
+
     # density grid
     cellmax = {}
     for r in f7_all:
@@ -428,7 +431,11 @@ def main():
 
     # complexes
     comp = []
-    for g in cluster(f7):
+    groups = cluster(f7)
+    in_complex = set()
+    for g in groups:
+        in_complex.update(g)
+    for g in groups:
         rs = [f7[i] for i in g]
         cs = {}
         for r in rs:
@@ -465,6 +472,32 @@ def main():
         })
     comp.sort(key=lambda d: -d["fs"])
     log(f"{len(comp):,} complexes, {sum(1 for c in comp if c['act']):,} active in last 24 h")
+
+    # ---- newest detections, drawn individually regardless of clustering ----
+    # A fire needs MIN_CLUSTER detections within LINK_KM to become a complex, and the
+    # median wait from first detection to fifth is under two hours but the upper quartile
+    # runs past a day. Without this layer a fire seen once on the latest pass would appear
+    # only as a faint density cell, which would make the map quietly older than the data.
+    # Anchored to the newest observation, not to build time: if the upstream feed lags
+    # more than RECENT_H the layer would otherwise silently empty out, which is exactly
+    # when a reader most needs to see what the latest pass found.
+    rec_cut = max(r["t"] for r in f7_all) - timedelta(hours=RECENT_H)
+    recent = []
+    orphan = 0
+    for i, r in enumerate(f7):
+        if r["t"] < rec_cut:
+            continue
+        new = i not in in_complex
+        orphan += new
+        x, y = to_px(r["lon"], r["lat"])
+        recent.append([round(x, 1), round(y, 1), bucket(r["frp"]), 1 if new else 0])
+    for r in f7_all:
+        if r["an"] or r["t"] < rec_cut:
+            continue
+        x, y = to_px(r["lon"], r["lat"])
+        recent.append([round(x, 1), round(y, 1), bucket(r["frp"]), 0])
+    log(f"newest {RECENT_H} h of observations (since {rec_cut:%d %b %H:%M}Z): "
+        f"{len(recent):,} detections drawn individually, {orphan:,} not yet in any complex")
 
     # country table
     agg = {}
@@ -535,7 +568,7 @@ def main():
         + ", ".join(f"{c['pl']} ({c['c']}) {c['fm24']:.0f} MW" for c in eu5))
 
     # ---- freshness: measured, not asserted ----
-    now = datetime.now(timezone.utc)
+    now = now_utc
     latest = max(r["t"] for r in r7_all)
     age_min = int((now - latest).total_seconds() // 60)
     plats = []
@@ -567,10 +600,11 @@ def main():
             "W": W, "H": H, "breaks": FRP_BREAKS,
             "age_min": age_min, "gap_max": gap_max, "plats": plats,
             "n7_all": len(r7_all), "n_modis": len(r7_all) - len(r7),
+            "recent_h": RECENT_H, "n_recent": len(recent), "n_orphan": orphan,
             "stale_h": STALE_PLATFORM_H,
         },
         "paths": paths, "frame": frame, "dots": dots, "comp": comp, "countries": countries,
-        "classes": classes, "top5": top5,
+        "classes": classes, "top5": top5, "recent": recent,
     }
 
     with open(os.path.join(HERE, "template.html")) as f:
