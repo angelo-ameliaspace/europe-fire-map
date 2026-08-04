@@ -60,13 +60,11 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans)
 .stamp .dot { width:7px; height:7px; background:var(--live); flex:none; }
 .stamp b { color:var(--ink3); font-weight:600; letter-spacing:.1em;
            text-transform:uppercase; font-family:var(--sans); font-size:var(--t1); }
-h1 { font-family:var(--sans); font-weight:700; font-size:var(--t7); line-height:1.05;
-     letter-spacing:-.035em; margin:0; max-width:30ch; text-wrap:balance; }
-.stand { font-size:var(--t4); color:var(--ink2); max-width:66ch; margin:0; }
-.stand b { color:var(--ink); font-weight:600; }
+h1.kicker { margin:0; }
 .instr { display:flex; flex-wrap:wrap; gap:.25rem .9rem; font-family:var(--sans);
          font-size:var(--t1); letter-spacing:.02em; color:var(--ink3);
-         padding-top:.85rem; border-top:1px solid var(--hair); }
+         padding:.8rem 0; border-top:1px solid var(--hair);
+         border-bottom:1px solid var(--hair); }
 .instr b { color:var(--ink2); font-weight:600; }
 .caveat { display:grid; grid-template-columns:auto 1fr; gap:.9rem; align-items:baseline;
           font-size:var(--t2); color:var(--ink2); border-left:3px solid var(--live);
@@ -249,26 +247,15 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   <div class="mast">
     <div class="brandbar">
       <div class="wm-inline" role="img" aria-label="Amelia Space"></div>
-      <span class="kicker">Fire monitor</span>
+      <h1 class="kicker">Europe fire monitor</h1>
       <span class="stamp"><b>As of</b><span class="dot"></span><span id="p-asof"></span></span>
     </div>
-
-    <h1 id="p-h1"></h1>
-    <p class="stand" id="p-stand"></p>
 
     <p class="caveat"><span class="lbl">Caveat</span><span><b>A snapshot, not a live feed.</b>
       Latest detection is <span id="p-latest"></span>. Near-real-time data is unvalidated and gets
       revised, and a fire may have started, spread or been contained since. <b>Not for emergency
       use</b> — consult EFFIS or your national civil protection service.</span></p>
 
-    <div class="instr">
-      <span><b>Instrument</b> VIIRS 375 m thermal anomalies</span>
-      <span><b>Platforms</b> Suomi-NPP · NOAA-20 · NOAA-21</span>
-      <span><b>Window</b> <span id="p-win"></span></span>
-      <span><b>Region</b> 25°W–40°E, 34–64°N — Europe and Anatolia, African detections excluded</span>
-      <span><b>Times</b> UK local · source UTC</span>
-      <span><b>Projection</b> Lambert conformal conic 40°/60°N</span>
-    </div>
   </div>
 
   <div class="mapcard">
@@ -298,6 +285,15 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       </div>
     </div>
   </div>
+
+    <div class="instr">
+      <span><b>Instrument</b> VIIRS 375 m thermal anomalies</span>
+      <span><b>Platforms</b> Suomi-NPP · NOAA-20 · NOAA-21</span>
+      <span><b>Window</b> <span id="p-win"></span></span>
+      <span><b>Region</b> 25°W–40°E, 34–64°N — Europe and Anatolia, African detections excluded</span>
+      <span><b>Times</b> UK local · source UTC</span>
+      <span><b>Projection</b> Lambert conformal conic 40°/60°N</span>
+    </div>
 
   <section>
     <h2>What the satellites are actually seeing</h2>
@@ -448,15 +444,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   $('p-out').textContent = M.outpct;
   $('p-foot').textContent = M.retrieved;
 
-  var wfC = FIRE.classes.filter(function (c) { return c.key === 'wildfire'; })[0];
-  var pctCx = Math.round(100 * wfC.cx / M.ncomp);
-  $('p-h1').textContent = fmt(wfC.cx) + ' of Europe’s ' + fmt(M.ncomp)
-    + ' fires behave like wildfire';
-  $('p-stand').innerHTML = 'That is ' + pctCx + '% of them, and they account for <b>'
-    + wfC.frp_pct + '% of all the radiative power</b> measured across ' + fmt(M.n7)
-    + ' detections this week. The other ' + fmt(M.ncomp - wfC.cx)
-    + ' are crop-residue burning and persistent industrial heat, which a detection count alone '
-    + 'cannot tell apart.';
 
   $('p-rules').innerHTML = 'A complex is called a <b>persistent heat source</b> when it appears on '
     + 'six or more separate days, never exceeds 60 MW, and stays within 4 km — the signature of a '
