@@ -126,7 +126,22 @@ h1 { font-family:var(--mono); font-weight:600; font-size:var(--t7); line-height:
 .filters input { accent-color:var(--r3); margin:0; }
 .filters .f.off { color:var(--ink3); }
 .mapstage { position:relative; width:100%; aspect-ratio:1160/760; background:var(--sunk); }
-.mapstage > * { position:absolute; inset:0; width:100%; height:100%; }
+.maprank { position:absolute; top:.85rem; left:.85rem; z-index:5; padding:.6rem .7rem;
+           background:color-mix(in srgb, var(--panel) 82%, transparent);
+           border:1px solid var(--rule); display:flex; flex-direction:column; gap:.3rem;
+           max-width:15rem; }
+.maprank .lbl { font-size:.625rem; margin-bottom:.15rem; }
+.maprank a { display:grid; grid-template-columns:1.15rem 1fr auto; gap:.5rem;
+             align-items:baseline; text-decoration:none; color:inherit; }
+.maprank .n { font-family:var(--mono); font-size:.625rem; font-weight:600; color:var(--ink3);
+              text-align:right; }
+.maprank .nm { font-family:var(--sans); font-size:var(--t2); font-weight:600; line-height:1.25;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.maprank .nm i { font-style:normal; font-weight:400; color:var(--ink3); font-size:var(--t1); }
+.maprank .mw { font-family:var(--mono); font-size:var(--t1); font-weight:600;
+               font-variant-numeric:tabular-nums; white-space:nowrap; }
+@media (max-width:700px) { .maprank { display:none; } }
+#basemap, #dots, #marks { position:absolute; inset:0; width:100%; height:100%; }
 #basemap .land { fill:var(--land); stroke:var(--landline); stroke-width:.6;
                  vector-effect:non-scaling-stroke; }
 #basemap .neat { fill:none; stroke:var(--rule); stroke-width:1;
@@ -142,7 +157,10 @@ h1 { font-family:var(--mono); font-weight:600; font-size:var(--t7); line-height:
 .badges line { stroke:var(--ink); stroke-width:1; }
 .tip { position:absolute; z-index:9; pointer-events:none; opacity:0; transition:opacity .1s;
        background:var(--panel); border:1px solid var(--ink); padding:.6rem .7rem;
-       font-size:var(--t2); min-width:212px; }
+       font-size:var(--t2); inset:auto; width:max-content; max-width:270px; height:auto;
+       box-shadow:0 8px 26px rgba(0,0,0,.35); }
+.tip .h small { font-family:var(--sans); font-weight:400; font-size:var(--t1);
+                color:var(--ink3); letter-spacing:0; }
 .tip .h { font-family:var(--mono); font-weight:600; letter-spacing:.02em;
           display:flex; align-items:center; gap:.45rem; margin-bottom:.4rem; }
 .tip dl { margin:0; display:grid; grid-template-columns:auto auto; gap:.05rem .9rem; }
@@ -246,6 +264,7 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
            role="img" aria-label="Map of Europe and the Mediterranean showing thermal anomaly detections"></svg>
       <canvas id="dots"></canvas>
       <svg id="marks" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="maprank" id="maprank"></div>
       <div class="tip" id="tip" role="status" aria-live="polite"></div>
     </div>
     <div class="legend">
@@ -507,6 +526,16 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
 
   $('marks').innerHTML = svg;
 
+  /* ---- ranked overlay on the map ---- */
+  $('maprank').innerHTML = '<span class="lbl">Burning hardest, last 24 h</span>'
+    + FIRE.top5.map(function (d, i) {
+      return '<a><span class="n">' + (i + 1) + '</span>'
+        + '<span class="nm">' + d.pl + '<br><i>' + d.pdist.toFixed(0) + ' km ' + d.pbrg
+        + ' · ' + d.c + '</i></span>'
+        + '<span class="mw" style="color:var(--r' + d.b + ')">'
+        + fmt(Math.round(d.fm24 || d.fm)) + ' MW</span></a>';
+    }).join('');
+
   /* ---- filters ---- */
   var fl = $('filters');
   FIRE.classes.forEach(function (c) {
@@ -529,8 +558,10 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   var tip = $('tip'), stage = $('stage');
   function show(d, cx, cy) {
     var lab = FIRE.classes.filter(function (c) { return c.key === d.cls; })[0].label;
-    tip.innerHTML = '<div class="h">' + keyMark(d.cls, 12, 5) + d.c + '</div>'
+    tip.innerHTML = '<div class="h">' + keyMark(d.cls, 12, 5) + d.pl
+      + '<small>' + d.pdist.toFixed(0) + ' km ' + d.pbrg + '</small></div>'
       + '<dl><dt>Type</dt><dd>' + lab + '</dd>'
+      + '<dt>Country</dt><dd>' + d.c + (d.eu ? '' : ' · ' + (d.cont || '')) + '</dd>'
       + '<dt>Position</dt><dd>' + d.lat.toFixed(2) + ', ' + d.lon.toFixed(2) + '</dd>'
       + '<dt>Detections</dt><dd>' + fmt(d.n) + '</dd>'
       + '<dt>Last 24 h</dt><dd>' + fmt(d.n24) + '</dd>'
