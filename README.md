@@ -26,7 +26,7 @@ of it downloading.
 |---|---|
 | `build.py` | Fetch, cluster, project, render. The whole pipeline. |
 | `template.html` | Page shell — CSS, markup, client JS. Contains a `/*PAYLOAD*/` marker that `build.py` replaces with the data. |
-| `fonts.css` | IBM Plex Mono and Archivo, subset to Latin and base64-inlined. The artifact CSP blocks font CDNs, so faces must be embedded. Both SIL OFL 1.1. |
+| `brand.css` | Amelia Space design tokens: Inter (variable, SIL OFL 1.1) as taken from ameliaspace.com, the brand primary `#008cff`, and the Amelia wordmark in both polarities. All base64-inlined — the artifact CSP forbids remote fonts and images. |
 | `places.json` | Natural Earth 1:10 m populated places inside the frame (1,282 settlements) used to name fire locations by nearest settlement, with distance and bearing. |
 | `boundaries.json` | Simplified Natural Earth 1:50 m country outlines, clipped to 30°W–45°E / 30–72°N. Used both for point-in-polygon country attribution and for drawing the basemap. |
 

@@ -529,9 +529,9 @@ def main():
         tpl = f.read()
     if "/*PAYLOAD*/" not in tpl:
         raise SystemExit("FATAL: template.html has no /*PAYLOAD*/ marker")
-    if "/*FONTS*/" in tpl:
-        with open(os.path.join(HERE, "fonts.css")) as f:
-            tpl = tpl.replace("/*FONTS*/", f.read())
+    if "/*BRAND*/" in tpl:
+        with open(os.path.join(HERE, "brand.css")) as f:
+            tpl = tpl.replace("/*BRAND*/", f.read())
     html = tpl.replace("/*PAYLOAD*/", "const FIRE=" + json.dumps(payload, separators=(",", ":")) + ";")
     with open(args.out, "w") as f:
         f.write(html)
