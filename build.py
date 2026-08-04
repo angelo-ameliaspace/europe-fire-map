@@ -611,6 +611,16 @@ def main():
         tpl = f.read()
     if "/*PAYLOAD*/" not in tpl:
         raise SystemExit("FATAL: template.html has no /*PAYLOAD*/ marker")
+    # The template advertises counts for layers it must also draw. A silent mismatch
+    # ships a page that asserts marks nobody can see, so fail the build instead.
+    for token, why in (("FIRE.recent", "newest-detection layer"),
+                       ("FIRE.top5", "intensity ranking"),
+                       ("FIRE.classes", "class breakdown"),
+                       ("FIRE.comp", "complex marks"),
+                       ("FIRE.dots", "density layer")):
+        if token not in tpl:
+            raise SystemExit(f"FATAL: template.html never reads {token} "
+                             f"but the page presents the {why}")
     if "/*BRAND*/" in tpl:
         with open(os.path.join(HERE, "brand.css")) as f:
             tpl = tpl.replace("/*BRAND*/", f.read())
