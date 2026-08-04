@@ -6,7 +6,7 @@ active-fire detections, and republishes it to a fixed Claude artifact URL.
 **Artifact (do not change):**
 `https://claude.ai/code/artifact/200730f4-270f-4758-b887-70fcef594c1e`
 
-Refreshed twice daily (07:00 and 19:00 UK) by a Claude Code cloud routine. Publishing to that exact URL is
+Refreshed hourly by a Claude Code cloud routine. Publishing to that exact URL is
 what keeps the link stable for everyone it has been shared with — publishing without it
 mints a new artifact and viewers silently keep seeing stale data on the old link.
 
@@ -61,6 +61,19 @@ those fires are out of scope. Add `"Asia"` for a strict continental filter, but 
 removes Turkey, Cyprus and the Caucasus, and Turkey is consistently among the largest
 contributors of radiative power in the basin. African coastlines are still drawn for
 cartographic context.
+
+## Freshness
+
+The page reports its own data age rather than warning about staleness in prose. `build.py`
+measures the gap between the newest detection and build time, the per-platform lag, and the
+longest unobserved gap in the window, and marks a platform STALE past
+`STALE_PLATFORM_H` hours (default 12; normal end-to-end lag is around 4).
+
+Hourly rebuilds cannot beat the upstream floor: NASA processes near-real-time detections
+roughly 4 hours after observation, and the three satellites pass about six times a day, so
+several hours can elapse with nobody looking. There is no way to make the page live — the
+artifact runtime grants no network-fetch capability, so a published page cannot call FIRMS
+itself.
 
 ## Times
 

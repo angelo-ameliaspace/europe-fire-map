@@ -42,6 +42,10 @@ SANITY_MIN_7D = 500
 # "Asia" here for a strict continental filter.
 EXCLUDE_CONTINENTS = {"Africa"}
 
+# A platform whose newest detection is older than this is treated as a degraded feed
+# and flagged on the page. Normal end-to-end NRT lag is roughly 4 hours.
+STALE_PLATFORM_H = 12
+
 # Fire-type heuristic. Validated against known geography: it puts ~63% of Algerian
 # complexes in "industrial" (gas flaring), ~89% of Ukrainian in "agricultural" (crop
 # residue), and 60% of Portuguese / 46% of Greek in "wildfire". Rules, not ground truth.
@@ -508,7 +512,25 @@ def main():
     log("  Europe-only equivalent: "
         + ", ".join(f"{c['pl']} ({c['c']}) {c['fm24']:.0f} MW" for c in eu5))
 
+    # ---- freshness: measured, not asserted ----
     now = datetime.now(timezone.utc)
+    latest = max(r["t"] for r in r7)
+    age_min = int((now - latest).total_seconds() // 60)
+    plats = []
+    for name in sorted({r["plat"] for r in r7}):
+        pts = [r["t"] for r in r7 if r["plat"] == name]
+        lag = (now - max(pts)).total_seconds() / 3600
+        plats.append({"name": name, "n": len(pts), "lag_h": round(lag, 1),
+                      "last": uk_str(max(pts), "%d %b %H:%M"),
+                      "stale": lag > STALE_PLATFORM_H})
+        flag = "  STALE" if lag > STALE_PLATFORM_H else ""
+        log(f"  {name:10s} {len(pts):6,d} det   newest {max(pts):%d %b %H:%M}Z   "
+            f"lag {lag:5.1f} h{flag}")
+    obs = sorted({r["t"] for r in r7})
+    gaps = [(obs[i + 1] - obs[i]).total_seconds() / 3600 for i in range(len(obs) - 1)]
+    gap_max = round(max(gaps), 1) if gaps else 0.0
+    log(f"  data age {age_min // 60} h {age_min % 60} min | longest observation gap {gap_max} h")
+
     payload = {
         "meta": {
             "win7": [uk_str(min(r["t"] for r in r7), "%d %b %Y %H:%M"),
@@ -520,6 +542,8 @@ def main():
             "outpct": round(100 * (len(r7) - len(f7)) / len(r7), 1),
             "retrieved": uk_str(now, "%d %B %Y, %H:%M").lstrip("0"),
             "W": W, "H": H, "breaks": FRP_BREAKS,
+            "age_min": age_min, "gap_max": gap_max, "plats": plats,
+            "stale_h": STALE_PLATFORM_H,
         },
         "paths": paths, "frame": frame, "dots": dots, "comp": comp, "countries": countries,
         "classes": classes, "top5": top5,
