@@ -53,6 +53,15 @@ claim, the country comparison in the bar-table lede, the map callout, the as-of 
 and the out-of-frame percentage. **Do not hardcode a country name, a percentage or a
 date into the prose**; it will go stale on the next refresh and start lying.
 
+## Scope
+
+`EXCLUDE_CONTINENTS` in `build.py` drops detections attributed to those continents from
+every figure. It is set to `{"Africa"}`: NASA's "Europe" feed reaches into the Maghreb and
+those fires are out of scope. Add `"Asia"` for a strict continental filter, but note that
+removes Turkey, Cyprus and the Caucasus, and Turkey is consistently among the largest
+contributors of radiative power in the basin. African coastlines are still drawn for
+cartographic context.
+
 ## Times
 
 Every timestamp rendered on the page is **Europe/London**, labelled BST or GMT, because

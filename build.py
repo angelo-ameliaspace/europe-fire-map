@@ -24,7 +24,7 @@ SATS = [
 ]
 
 # map frame (drawn) and projection constants
-BB = (-25.0, 33.0, 40.0, 64.0)
+BB = (-25.0, 34.0, 40.0, 64.0)
 LON0, PH1, PH2, PH0 = 13.0, 40.0, 60.0, 50.0
 W, H = 1160.0, 760.0
 GRID_DEG = 0.03          # density-layer cell size
@@ -35,6 +35,12 @@ R_EARTH_KM = 6371.0
 
 # minimum plausible detection count; guards against a truncated or empty feed
 SANITY_MIN_7D = 500
+
+# Continents excluded from the analysis. NASA's regional feed named "Europe" reaches
+# across the Mediterranean into the Maghreb; those detections are dropped. Countries
+# Natural Earth classes as Asia (Turkey, Cyprus, the Caucasus) are retained -- add
+# "Asia" here for a strict continental filter.
+EXCLUDE_CONTINENTS = {"Africa"}
 
 # Fire-type heuristic. Validated against known geography: it puts ~63% of Algerian
 # complexes in "industrial" (gas flaring), ~89% of Ukrainian in "agricultural" (crop
@@ -185,12 +191,16 @@ def to_km(lon, lat):
 
 
 # ---------------------------------------------------------------- countries
-def load_places():
-    """Natural Earth populated places inside the frame, pre-projected to the km plane."""
+def load_places(drop_admin=frozenset()):
+    """Natural Earth populated places inside the frame, pre-projected to the km plane.
+    Settlements in excluded countries are dropped so a fire is never named after a
+    town on the other side of a sea we are not reporting on."""
     with open(os.path.join(HERE, "places.json"), encoding="utf-8") as f:
         rows = json.load(f)
     out = []
     for nm, adm, la, lo, pop in rows:
+        if adm in drop_admin:
+            continue
         kx, ky = to_km(lo, la)
         out.append((nm, adm, la, lo, pop, kx, ky))
     return out
@@ -353,10 +363,25 @@ def main():
         raise SystemExit(f"FATAL: only {len(r7)} 7-day detections — feed looks broken, refusing to publish")
 
     bnd = load_boundaries()
-    places = load_places()
+    drop_names = {n for n, c in zip(bnd["names"], bnd.get("cont", []))
+                  if c in EXCLUDE_CONTINENTS}
+    places = load_places(drop_names)
     log(f"gazetteer: {len(places):,} settlements in frame")
     attribute(r7, bnd)
     attribute(r24, bnd)
+
+    def keep(rows, label):
+        before = len(rows)
+        frp_out = sum(r["frp"] for r in rows if r["cont"] in EXCLUDE_CONTINENTS)
+        out = [r for r in rows if r["cont"] not in EXCLUDE_CONTINENTS]
+        log(f"excluded {before - len(out):,} of {before:,} {label} detections "
+            f"({', '.join(sorted(EXCLUDE_CONTINENTS))}; {frp_out:,.0f} MW)")
+        return out
+
+    r7 = keep(r7, "7-day")
+    r24 = keep(r24, "24-hour")
+    if len(r7) < SANITY_MIN_7D:
+        raise SystemExit("FATAL: too few detections after continental filtering")
 
     cut = min(r["t"] for r in r24)
     inframe = lambda r: BB[0] <= r["lon"] <= BB[2] and BB[1] <= r["lat"] <= BB[3]

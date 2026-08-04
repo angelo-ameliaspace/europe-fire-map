@@ -1,4 +1,4 @@
-<title>Europe &amp; the Mediterranean — VIIRS fire activity</title>
+<title>Europe — VIIRS fire activity</title>
 
 <style>
 /*FONTS*/
@@ -241,7 +241,8 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       <span><b>Window</b> <span id="p-win"></span></span>
       <span><b>Times</b> UK local · source UTC</span>
       <span><b>Projection</b> Lambert conformal conic 40°/60°N</span>
-      <span><b>Region</b> 25°W–40°E, 33–64°N — Europe, the Maghreb, Anatolia</span>
+      <span><b>Region</b> 25°W–40°E, 34–64°N — Europe and Anatolia</span>
+      <span><b>Excluded</b> African detections</span>
     </div>
     <h1 id="p-h1">Most of these fires are not wildfires</h1>
     <p class="stand" id="p-stand"></p>
@@ -261,7 +262,7 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
     <div class="filters" id="filters"><span class="lbl">Show</span></div>
     <div class="mapstage" id="stage">
       <svg id="basemap" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"
-           role="img" aria-label="Map of Europe and the Mediterranean showing thermal anomaly detections"></svg>
+           role="img" aria-label="Map of Europe showing thermal anomaly detections"></svg>
       <canvas id="dots"></canvas>
       <svg id="marks" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="maprank" id="maprank"></div>
@@ -297,8 +298,7 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
     <p class="lede">Detected within the last 24 hours and ranked by the peak radiative power
       measured <em>during that window</em> — not by the week's running total, which would keep
       promoting fires that have already gone out. Each is placed by its nearest settlement, with
-      distance and bearing, because fires rarely start in towns. The frame covers the whole
-      Mediterranean basin, so entries outside Europe carry their continent.</p>
+      distance and bearing, because fires rarely start in towns.</p>
     <div class="t5" id="t5"></div>
   </section>
 
@@ -365,11 +365,17 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
         <h3>Coverage</h3>
         <p>The frame spans 25°W–40°E, 33–64°N, excluding <span id="p-out"></span>% of detections,
           which are still counted in every figure. Seven days is the cap on NASA's open feeds.</p>
-        <h3>Not only Europe</h3>
+        <h3>What "Europe" means here</h3>
         <p>NASA's regional feed is named "Europe" but reaches across the Mediterranean into the
-          Maghreb, Anatolia and the Levant, and those fires are included here — the basin behaves
-          as one fire domain and EFFIS monitors it as such. Entries outside Europe are labelled
-          with their continent wherever they are named individually.</p>
+          Maghreb. African detections are excluded from every figure on this page, including the
+          density layer, the classification totals and the country table. The African coastline is
+          still drawn, because a map of the Mediterranean without its southern shore reads as
+          broken rather than as scoped.</p>
+        <p>Countries Natural Earth classes as Asia — Turkey, Cyprus, the Caucasus — are retained.
+          Turkey alone is among the largest contributors of radiative power in the basin, and
+          excluding Anatolia would say more about where a boundary was drawn than about where
+          things are burning. Any entry outside Europe is labelled with its continent wherever it
+          is named individually.</p>
       </div>
     </div>
   </section>
@@ -432,7 +438,7 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   var pctCx = Math.round(100 * wfC.cx / M.ncomp);
   $('p-h1').textContent = pctCx < 50
     ? 'Most of these fires are not wildfires'
-    : 'The Mediterranean fire week, ranked by radiative power';
+    : 'Europe’s fire week, ranked by radiative power';
   $('p-stand').innerHTML = 'Of ' + fmt(M.n7) + ' thermal detections over seven days, only <b>'
     + fmt(wfC.cx) + ' of ' + fmt(M.ncomp) + ' fire complexes — ' + pctCx
     + '% — behave like wildfire</b>. Those few carry <b>' + wfC.frp_pct
