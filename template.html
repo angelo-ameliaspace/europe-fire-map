@@ -1,0 +1,556 @@
+<title>Europe fire activity — VIIRS, 28 Jul–4 Aug 2026</title>
+
+<style>
+  :root {
+    --surface:#f5f7f7; --panel:#ffffff; --sunk:#eceff0;
+    --ink:#0f171b; --ink-2:#3b4a51; --ink-3:#6d7e86;
+    --rule:#d5dee0; --rule-2:#e5ebec;
+    --land:#e4eaeb; --land-line:#c3d0d3;
+    --r0:#D18E33; --r1:#C4701F; --r2:#AE4A18; --r3:#8E2C12; --r4:#68190B;
+    --live:#C4201B; --quiet:#8fa2a9;
+    --accent:#AE4A18;
+    --grid:#e2e8e9;
+
+    --f-display: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --f-ui: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --f-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+    --s1:.75rem; --s2:.8125rem; --s3:.9375rem; --s4:1.0625rem;
+    --s5:1.3125rem; --s6:1.6875rem; --s7:2.5rem;
+    --gap:1.5rem; --pad:1.375rem; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface:#11171a; --panel:#171f23; --sunk:#1d272c;
+      --ink:#e9eff1; --ink-2:#a9b9c0; --ink-3:#77898f;
+      --rule:#2a373d; --rule-2:#222d32;
+      --land:#1b2429; --land-line:#35464d;
+      --r0:#FCE3A0; --r1:#F7C55A; --r2:#EF9433; --r3:#DE6120; --r4:#C03A14;
+      --live:#FF6E4C; --quiet:#5b6f77;
+      --accent:#EF9433; --grid:#263237;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface:#11171a; --panel:#171f23; --sunk:#1d272c;
+    --ink:#e9eff1; --ink-2:#a9b9c0; --ink-3:#77898f;
+    --rule:#2a373d; --rule-2:#222d32;
+    --land:#1b2429; --land-line:#35464d;
+    --r0:#FCE3A0; --r1:#F7C55A; --r2:#EF9433; --r3:#DE6120; --r4:#C03A14;
+    --live:#FF6E4C; --quiet:#5b6f77;
+    --accent:#EF9433; --grid:#263237;
+  }
+  :root[data-theme="light"] {
+    --surface:#f5f7f7; --panel:#ffffff; --sunk:#eceff0;
+    --ink:#0f171b; --ink-2:#3b4a51; --ink-3:#6d7e86;
+    --rule:#d5dee0; --rule-2:#e5ebec;
+    --land:#e4eaeb; --land-line:#c3d0d3;
+    --r0:#D18E33; --r1:#C4701F; --r2:#AE4A18; --r3:#8E2C12; --r4:#68190B;
+    --live:#C4201B; --quiet:#8fa2a9;
+    --accent:#AE4A18; --grid:#e2e8e9;
+  }
+
+  body { margin:0; background:var(--surface); color:var(--ink);
+         font-family:var(--f-ui); font-size:var(--s3); line-height:1.55;
+         -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1180px; margin:0 auto; padding:2.5rem 1.25rem 4rem;
+          display:flex; flex-direction:column; gap:var(--gap); }
+  .num { font-family:var(--f-mono); font-variant-numeric:tabular-nums; }
+
+  /* ---------- masthead ---------- */
+  header { display:flex; flex-direction:column; gap:.5rem;
+           border-bottom:2px solid var(--ink); padding-bottom:1.1rem; }
+  .eyebrow { font-size:var(--s1); text-transform:uppercase; letter-spacing:.13em;
+             font-weight:600; color:var(--accent); }
+  h1 { font-family:var(--f-display); font-weight:600; font-size:var(--s7);
+       line-height:1.06; letter-spacing:-.015em; margin:0; text-wrap:balance; max-width:24ch; }
+  .standfirst { font-size:var(--s4); color:var(--ink-2); max-width:64ch; margin:.15rem 0 0; }
+  .provenance { display:flex; flex-wrap:wrap; gap:.4rem 1.25rem; font-size:var(--s1);
+                color:var(--ink-3); margin-top:.5rem; }
+  .provenance b { color:var(--ink-2); font-weight:600; }
+
+  /* ---------- as-of band ---------- */
+  .asof { display:flex; flex-wrap:wrap; align-items:baseline; gap:.35rem 1rem;
+          background:var(--panel); border:1px solid var(--rule);
+          border-left:4px solid var(--live); padding:.85rem 1.1rem; }
+  .asof .stamp { display:inline-flex; align-items:center; gap:.5rem;
+                 font-family:var(--f-mono); font-size:var(--s4); font-weight:600;
+                 letter-spacing:-.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .asof .stamp .dot { width:8px; height:8px; border-radius:50%; background:var(--live);
+                      flex:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--live) 22%, transparent); }
+  .asof .lbl { font-size:var(--s1); text-transform:uppercase; letter-spacing:.11em;
+               font-weight:700; color:var(--live); }
+  .asof .qual { font-size:var(--s2); color:var(--ink-2); max-width:62ch; }
+  .asof .qual b { color:var(--ink); font-weight:650; }
+
+  /* ---------- stat tiles ---------- */
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+           background:var(--rule); border:1px solid var(--rule); }
+  .tile { background:var(--panel); padding:var(--pad); display:flex;
+          flex-direction:column; gap:.3rem; }
+  .tile .k { font-size:var(--s1); text-transform:uppercase; letter-spacing:.09em;
+             color:var(--ink-3); font-weight:600; }
+  .tile .v { font-family:var(--f-mono); font-size:var(--s6); font-weight:600;
+             letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .tile .s { font-size:var(--s2); color:var(--ink-2); }
+  .tile.hero .v { color:var(--accent); }
+
+  /* ---------- map ---------- */
+  .mapcard { background:var(--panel); border:1px solid var(--rule); }
+  .mapstage { position:relative; width:100%; aspect-ratio:1160/760; background:var(--sunk); }
+  .mapstage > * { position:absolute; inset:0; width:100%; height:100%; }
+  #basemap .land { fill:var(--land); stroke:var(--land-line); stroke-width:.6;
+                   vector-effect:non-scaling-stroke; }
+  #basemap .neatline { fill:none; stroke:var(--rule); stroke-width:1;
+                       vector-effect:non-scaling-stroke; }
+  #dots { image-rendering:auto; }
+  #marks circle { cursor:crosshair; }
+  #marks .quiet { opacity:.42; }
+  #marks .live { stroke:var(--panel); stroke-width:1.4; paint-order:stroke; }
+  #marks circle:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+  .callout text { font-family:var(--f-ui); font-size:12.5px; font-weight:650; fill:var(--ink); }
+  .callout .sub { font-weight:400; fill:var(--ink-2); font-size:11.5px; }
+  .callout line { stroke:var(--ink); stroke-width:1; }
+  .callout rect { fill:var(--panel); stroke:var(--rule); }
+
+  .tooltip { position:absolute; z-index:9; pointer-events:none; opacity:0;
+             transition:opacity .1s; background:var(--panel); color:var(--ink);
+             border:1px solid var(--rule); box-shadow:0 6px 22px rgba(0,0,0,.16);
+             padding:.6rem .7rem; font-size:var(--s2); min-width:190px;
+             border-radius:var(--radius); }
+  .tooltip .tt-h { font-weight:650; display:flex; align-items:center; gap:.4rem;
+                   margin-bottom:.35rem; }
+  .tooltip .swatch { width:9px; height:9px; border-radius:50%; flex:none; }
+  .tooltip dl { margin:0; display:grid; grid-template-columns:auto auto; gap:.1rem .8rem; }
+  .tooltip dt { color:var(--ink-3); }
+  .tooltip dd { margin:0; font-family:var(--f-mono); font-variant-numeric:tabular-nums;
+                text-align:right; }
+
+  /* ---------- legend ---------- */
+  .legend { display:flex; flex-wrap:wrap; gap:1.5rem 2.25rem; padding:var(--pad);
+            border-top:1px solid var(--rule); }
+  .lg { display:flex; flex-direction:column; gap:.45rem; }
+  .lg .t { font-size:var(--s1); text-transform:uppercase; letter-spacing:.09em;
+           font-weight:600; color:var(--ink-3); }
+  .ramp { display:flex; align-items:flex-end; gap:2px; }
+  .ramp i { width:34px; height:11px; display:block; }
+  .rampscale { display:flex; gap:2px; font-size:var(--s1); color:var(--ink-3);
+               font-family:var(--f-mono); }
+  .rampscale span { width:36px; }
+  .lg .row { display:flex; align-items:center; gap:1.1rem; font-size:var(--s2); color:var(--ink-2); }
+  .lg .row span { display:inline-flex; align-items:center; gap:.4rem; }
+
+  /* ---------- section ---------- */
+  h2 { font-family:var(--f-display); font-size:var(--s5); font-weight:600;
+       margin:0 0 .3rem; letter-spacing:-.01em; }
+  .lede { color:var(--ink-2); font-size:var(--s3); max-width:70ch; margin:0 0 1rem; }
+  .panel { background:var(--panel); border:1px solid var(--rule); padding:var(--pad); }
+
+  /* ---------- bar table ---------- */
+  .bartable { display:grid; grid-template-columns:minmax(9rem,auto) 1fr 1fr auto;
+              gap:.1rem 1.1rem; align-items:center; }
+  .bartable .hd { font-size:var(--s1); text-transform:uppercase; letter-spacing:.08em;
+                  font-weight:600; color:var(--ink-3); padding-bottom:.5rem;
+                  border-bottom:1px solid var(--rule); }
+  .bartable .hd.r, .bartable .cell.r { text-align:right; }
+  .bartable .cn { font-size:var(--s2); padding:.3rem 0; }
+  .bartable .cell { padding:.3rem 0; display:flex; align-items:center; gap:.6rem; }
+  .bar { position:relative; height:13px; background:var(--sunk); flex:1; min-width:0; }
+  .bar i { position:absolute; inset:0 auto 0 0; display:block;
+           border-radius:0 3px 3px 0; }
+  .val { flex:none; width:3.5rem; text-align:right; font-family:var(--f-mono);
+         font-size:var(--s1); color:var(--ink-2); font-variant-numeric:tabular-nums; }
+  .bar.mean i { background:var(--ink-3); }
+  .n24 { font-family:var(--f-mono); font-size:var(--s2); font-variant-numeric:tabular-nums; }
+  .n24.zero { color:var(--ink-3); }
+
+  /* ---------- table ---------- */
+  .tablewrap { overflow-x:auto; border:1px solid var(--rule); background:var(--panel); }
+  table { border-collapse:collapse; width:100%; font-size:var(--s2); }
+  th, td { padding:.5rem .7rem; text-align:left; white-space:nowrap;
+           border-bottom:1px solid var(--rule-2); }
+  th { font-size:var(--s1); text-transform:uppercase; letter-spacing:.08em;
+       color:var(--ink-3); font-weight:600; background:var(--panel);
+       position:sticky; top:0; border-bottom:1px solid var(--rule); }
+  td.n, th.n { text-align:right; font-family:var(--f-mono);
+               font-variant-numeric:tabular-nums; }
+  tbody tr:hover { background:var(--sunk); }
+  .pill { display:inline-flex; align-items:center; gap:.35rem; font-size:var(--s1);
+          font-weight:600; padding:.1rem .45rem; border:1px solid currentColor;
+          border-radius:999px; }
+  .pill.on { color:var(--live); }
+  .pill.off { color:var(--ink-3); }
+  .pill .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  /* ---------- notes ---------- */
+  .notes { display:grid; grid-template-columns:repeat(2,1fr); gap:var(--gap); }
+  .note h3 { font-size:var(--s3); margin:0 0 .35rem; font-weight:650; }
+  .note p { margin:0 0 .7rem; color:var(--ink-2); font-size:var(--s2); max-width:60ch; }
+  .note p:last-child { margin-bottom:0; }
+  code { font-family:var(--f-mono); font-size:.92em; background:var(--sunk);
+         padding:.08em .3em; border-radius:2px; word-break:break-all; }
+  footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--s1);
+           color:var(--ink-3); }
+  footer a { color:var(--ink-2); }
+
+  @media (max-width:860px) {
+    .tiles { grid-template-columns:repeat(2,1fr); }
+    .notes { grid-template-columns:1fr; }
+    h1 { font-size:var(--s6); }
+    .bartable { grid-template-columns:minmax(7rem,auto) 1fr auto; }
+    .bartable .m-hide { display:none; }
+  }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Active fire detections · Europe &amp; Mediterranean</div>
+    <h1>Where Europe is burning right now</h1>
+    <p class="standfirst">Every thermal anomaly picked up by the three VIIRS instruments over the
+      past seven days, aggregated into fire complexes and ranked by radiative power.
+      <span id="p-headline"></span></p>
+    <div class="provenance">
+      <span><b>Source</b> NASA FIRMS · VIIRS 375 m NRT (Suomi-NPP, NOAA-20, NOAA-21)</span>
+      <span><b>Window</b> <span id="p-win"></span> UTC</span>
+      <span><b>Projection</b> Lambert conformal conic, 40°/60°N</span>
+    </div>
+  </header>
+
+  <div class="asof">
+    <span class="lbl">As of</span>
+    <span class="stamp"><span class="dot"></span><span id="p-asof"></span></span>
+    <span class="qual"><b>Static snapshot — this page does not update itself.</b>
+      Latest detection in the dataset is <span id="p-latest"></span> UTC. VIIRS near-real-time
+      detections are unvalidated and get revised; a fire may have started, spread or been
+      contained since retrieval.</span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="k">Detections, last 24 h</div>
+      <div class="v" id="t-24"></div>
+      <div class="s" id="t-24s"></div>
+    </div>
+    <div class="tile">
+      <div class="k">Detections, 7 days</div>
+      <div class="v" id="t-7"></div>
+      <div class="s" id="t-7s"></div>
+    </div>
+    <div class="tile">
+      <div class="k">Complexes burning now</div>
+      <div class="v" id="t-act"></div>
+      <div class="s" id="t-acts"></div>
+    </div>
+    <div class="tile hero">
+      <div class="k">Largest active complex</div>
+      <div class="v" id="t-max"></div>
+      <div class="s" id="t-maxs"></div>
+    </div>
+  </div>
+
+  <div class="mapcard">
+    <div class="mapstage" id="stage">
+      <svg id="basemap" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"
+           role="img" aria-label="Map of Europe and the Mediterranean showing fire detections"></svg>
+      <canvas id="dots"></canvas>
+      <svg id="marks" viewBox="0 0 1160 760" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="tooltip" id="tip" role="status" aria-live="polite"></div>
+    </div>
+    <div class="legend">
+      <div class="lg">
+        <div class="t">Peak fire radiative power</div>
+        <div class="ramp" id="lg-ramp"></div>
+        <div class="rampscale" id="lg-scale"></div>
+      </div>
+      <div class="lg">
+        <div class="t">Complex size — cumulative radiative power</div>
+        <svg width="250" height="64" viewBox="0 0 250 64" aria-hidden="true" id="lg-size"></svg>
+      </div>
+      <div class="lg">
+        <div class="t">State</div>
+        <div class="row">
+          <span><svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6"
+            fill="var(--r3)" stroke="var(--panel)" stroke-width="1.4"/></svg> Detected in last 24 h</span>
+          <span><svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6"
+            fill="var(--r3)" opacity=".42"/></svg> Quiet since</span>
+        </div>
+        <div class="row" style="font-size:var(--s1);color:var(--ink-3)">
+          Small dots behind the circles are individual 375 m detections.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Detection counts mislead — intensity is what separates the wildfires</h2>
+    <p class="lede"><span id="p-contrast"></span> Read the two bar columns across each row:
+      high on both means genuine wildfire; high on the left and low on the right is the signature
+      of widespread low-intensity agricultural stubble burning at harvest.</p>
+    <div class="panel">
+      <div class="bartable" id="bt">
+        <div class="hd">Country</div>
+        <div class="hd">Cumulative FRP, 7 d (MW)</div>
+        <div class="hd m-hide">Mean FRP per detection (MW)</div>
+        <div class="hd r">Det. 24 h</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The twenty most energetic complexes</h2>
+    <p class="lede">Detections grouped by 3 km single-linkage clustering. Footprint is the convex
+      hull of a complex's detections — an indication of how far it has spread, <em>not</em> a
+      burned-area measurement.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>State</th><th>Country</th><th class="n">Lat</th><th class="n">Lon</th>
+          <th class="n">Det.</th><th class="n">Det. 24 h</th><th class="n">Cum. FRP</th>
+          <th class="n">Peak FRP</th><th class="n">Footprint</th><th>First seen</th><th>Last seen</th>
+        </tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>How to read this, and what it does not say</h2>
+    <div class="notes">
+      <div class="panel note">
+        <h3>Seven days, not thirty</h3>
+        <p>NASA's open FIRMS feeds cap at a 7-day window. Extending to 30 days needs a free FIRMS
+          <code>MAP_KEY</code> and the area API, which accepts a 10-day range per request — three
+          calls to <code>/api/area/csv/{KEY}/VIIRS_SNPP_NRT/-25,33,40,63/10/{date}</code> stitched
+          together. Everything on this page is labelled by its true window; nothing is extrapolated.</p>
+        <p>The map frame spans 25°W–40°E, 33–64°N. That excludes <span id="p-out"></span>% of
+          detections, which are still counted in every figure but fall outside the drawn area.</p>
+        <h3>Detections are not fires</h3>
+        <p>A 375 m pixel flags a thermal anomaly. One fire generates many detections across
+          multiple overpasses, and gas flares, industrial heat and crop burning all register.
+          Clustering reduces this but does not eliminate it.</p>
+      </div>
+      <div class="panel note">
+        <h3>Radiative power is not burned area</h3>
+        <p>FRP measures energy emitted at the moment of overpass. It indicates intensity, not
+          extent. For burned area you need post-fire optical mapping — Sentinel-2 dNBR — or the
+          official EFFIS perimeters.</p>
+        <h3>Gaps are invisible</h3>
+        <p>Thick smoke and cloud block detection, and each satellite sees a given point roughly
+          twice daily. A fire that ignited and was contained between overpasses does not appear
+          here at all. Absence of detections is not evidence of absence of fire.</p>
+        <h3>For season context</h3>
+        <p>EU-wide burned area reached <b>457,459 ha by 29 July 2026</b>, 31.8% above the same
+          date in 2025, with France at a national record — figures from EFFIS reporting, not
+          derived from the data on this page.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Fire detections: NASA FIRMS VIIRS C2 near-real-time, retrieved <span id="p-foot"></span>. Boundaries:
+    Natural Earth 1:50 m. Season context: European Forest Fire Information System via press
+    reporting. Near-real-time data is unvalidated and subject to revision.
+  </footer>
+</div>
+
+<script>
+/*PAYLOAD*/
+
+(function () {
+  var M = FIRE.meta, W = M.W, H = M.H;
+  var fmt = function (n) { return n.toLocaleString('en-US'); };
+  var ramp = function () {
+    var cs = getComputedStyle(document.documentElement);
+    return [0,1,2,3,4].map(function (i) { return cs.getPropertyValue('--r'+i).trim(); });
+  };
+
+  /* ---- masthead + tiles ---- */
+  document.getElementById('p-win').textContent = M.win7[0] + ' → ' + M.win7[1];
+  document.getElementById('p-asof').textContent = M.retrieved;
+  document.getElementById('p-latest').textContent = M.win7[1];
+  document.getElementById('p-out').textContent = M.outpct;
+  document.getElementById('p-foot').textContent = M.retrieved;
+  document.getElementById('t-24').textContent = fmt(M.n24);
+  document.getElementById('t-24s').textContent = M.win24[0] + ' → ' + M.win24[1] + ' UTC';
+  document.getElementById('t-7').textContent = fmt(M.n7);
+  document.getElementById('t-7s').textContent =
+    'Shown as ' + fmt(M.ncell) + ' grid cells at 3 km; ' + M.outpct
+    + '% fall outside the map frame';
+  document.getElementById('t-act').textContent = fmt(M.nact);
+  document.getElementById('t-acts').textContent = 'of ' + fmt(M.ncomp) + ' complexes mapped';
+
+  var comp = FIRE.comp.slice().sort(function (a, b) { return b.fs - a.fs; });
+  var live = comp.filter(function (d) { return d.act; });
+  var top = live[0];
+  var liveTotal = live.reduce(function (s, d) { return s + d.fs; }, 0);
+  document.getElementById('t-max').textContent = fmt(top.fs) + ' MW';
+  var share = Math.round(100 * top.fs / liveTotal);
+  document.getElementById('p-headline').innerHTML =
+    (share >= 25
+      ? 'One complex in ' + top.c + ' dominates, accounting for <b>' + share
+        + '% of all radiative energy still being emitted</b> across the continent.'
+      : 'Activity is spread across ' + fmt(live.length)
+        + ' complexes still burning; the largest, in ' + top.c + ', accounts for <b>'
+        + share + '% of the radiative energy still being emitted</b>.');
+
+  var byDet = FIRE.countries.slice().sort(function (a, b) { return b.det - a.det; });
+  var volume = byDet[0];
+  var intense = FIRE.countries.slice().sort(function (a, b) { return b.fmean - a.fmean; })[0];
+  document.getElementById('p-contrast').textContent = (volume.name === intense.name)
+    ? volume.name + ' leads on both detection count and mean radiative power per detection, '
+      + 'so its total is not an artefact of counting.'
+    : volume.name + ' records the most detections of any country (' + fmt(volume.det)
+      + '), but averages ' + volume.fmean.toFixed(1) + ' MW per detection against '
+      + intense.name + "'s " + intense.fmean.toFixed(1) + ' MW.';
+
+  document.getElementById('t-maxs').textContent =
+    top.c + ' · ' + Math.abs(top.lat).toFixed(2) + '°' + (top.lat < 0 ? 'S' : 'N') + ' '
+    + Math.abs(top.lon).toFixed(2) + '°' + (top.lon < 0 ? 'W' : 'E') + ' · '
+    + Math.round(100 * top.fs / liveTotal) + '% of all active radiative power';
+
+  /* ---- basemap ---- */
+  var bm = document.getElementById('basemap');
+  bm.innerHTML = FIRE.paths.map(function (d) {
+    return '<path class="land" d="' + d + '"/>';
+  }).join('') + '<path class="neatline" d="' + FIRE.frame + '"/>';
+
+  /* ---- density canvas ---- */
+  var cv = document.getElementById('dots'), ctx = cv.getContext('2d');
+  function drawDots() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var r = cv.getBoundingClientRect();
+    if (!r.width) return;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    var k = Math.min(cv.width / W, cv.height / H);
+    var px = (cv.width - W * k) / 2, py = (cv.height - H * k) / 2;
+    var cols = ramp();
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = 0.62;
+    var sz = Math.max(1.4, 1.9 * dpr);
+    for (var b = 0; b < 5; b++) {
+      ctx.fillStyle = cols[b];
+      for (var i = 0; i < FIRE.dots.length; i++) {
+        var d = FIRE.dots[i];
+        if (d[2] !== b) continue;
+        ctx.fillRect(d[0] * k + px - sz / 2, d[1] * k + py - sz / 2, sz, sz);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---- complexes ---- */
+  var maxFs = comp[0].fs;
+  var rad = function (d) { return 2.2 + 21 * Math.pow(d.fs / maxFs, 0.42); };
+  var mk = document.getElementById('marks');
+  var svg = comp.slice().sort(function (a, b) { return b.fs - a.fs; }).map(function (d, i) {
+    return '<circle tabindex="0" role="button" data-i="' + i + '" class="' + (d.act ? 'live' : 'quiet')
+      + '" cx="' + d.x + '" cy="' + d.y + '" r="' + rad(d).toFixed(1)
+      + '" fill="var(--r' + d.b + ')"><title>' + d.c + ' — ' + fmt(d.fs) + ' MW</title></circle>';
+  }).join('');
+
+  var lx = top.x + 30, ly = top.y - 54;
+  svg += '<g class="callout" aria-hidden="true">'
+    + '<line x1="' + (top.x + rad(top) + 2) + '" y1="' + (top.y - 6) + '" x2="' + lx + '" y2="' + (ly + 26) + '"/>'
+    + '<rect x="' + lx + '" y="' + ly + '" width="188" height="34" rx="2"/>'
+    + '<text x="' + (lx + 8) + '" y="' + (ly + 14) + '">' + top.c + '</text>'
+    + '<text class="sub" x="' + (lx + 8) + '" y="' + (ly + 28) + '">'
+    + fmt(top.fs) + ' MW · since ' + top.t0.slice(0, 6) + '</text></g>';
+  mk.innerHTML = svg;
+
+  /* ---- tooltip ---- */
+  var tip = document.getElementById('tip'), stage = document.getElementById('stage');
+  function show(d, cx, cy) {
+    tip.innerHTML = '<div class="tt-h"><span class="swatch" style="background:var(--r' + d.b
+      + ')"></span>' + d.c + '</div><dl>'
+      + '<dt>Position</dt><dd>' + d.lat.toFixed(2) + ', ' + d.lon.toFixed(2) + '</dd>'
+      + '<dt>Detections</dt><dd>' + fmt(d.n) + '</dd>'
+      + '<dt>Last 24 h</dt><dd>' + fmt(d.n24) + '</dd>'
+      + '<dt>Cumulative FRP</dt><dd>' + fmt(d.fs) + ' MW</dd>'
+      + '<dt>Peak FRP</dt><dd>' + d.fm.toFixed(1) + ' MW</dd>'
+      + '<dt>Footprint</dt><dd>' + fmt(d.fp) + ' ha</dd>'
+      + '<dt>First seen</dt><dd>' + d.t0 + '</dd>'
+      + '<dt>Last seen</dt><dd>' + d.t1 + '</dd></dl>';
+    var sr = stage.getBoundingClientRect();
+    var x = cx - sr.left + 14, y = cy - sr.top + 14;
+    tip.style.opacity = 1;
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    if (x + tw > sr.width) x = cx - sr.left - tw - 14;
+    if (y + th > sr.height) y = cy - sr.top - th - 14;
+    tip.style.left = Math.max(4, x) + 'px'; tip.style.top = Math.max(4, y) + 'px';
+  }
+  var sorted = comp.slice().sort(function (a, b) { return b.fs - a.fs; });
+  mk.addEventListener('pointerover', function (e) {
+    var t = e.target.closest('circle'); if (!t) return;
+    var r = t.getBoundingClientRect();
+    show(sorted[+t.dataset.i], r.left + r.width / 2, r.top + r.height / 2);
+  });
+  mk.addEventListener('focusin', function (e) {
+    var t = e.target.closest('circle'); if (!t) return;
+    var r = t.getBoundingClientRect();
+    show(sorted[+t.dataset.i], r.left + r.width / 2, r.top + r.height / 2);
+  });
+  mk.addEventListener('pointerout', function () { tip.style.opacity = 0; });
+  mk.addEventListener('focusout', function () { tip.style.opacity = 0; });
+
+  /* ---- legend ---- */
+  var br = M.breaks;
+  document.getElementById('lg-ramp').innerHTML =
+    [0,1,2,3,4].map(function (i) { return '<i style="background:var(--r' + i + ')"></i>'; }).join('');
+  document.getElementById('lg-scale').innerHTML =
+    ['&lt;' + br[0], br[0] + '–' + br[1], br[1] + '–' + br[2], br[2] + '–' + br[3], br[3] + '+']
+      .map(function (s) { return '<span>' + s + '</span>'; }).join('') + '<span>MW</span>';
+
+  var ls = document.getElementById('lg-size'), sh = '';
+  [500, 8000, maxFs].forEach(function (v, i) {
+    var r = 2.2 + 21 * Math.pow(v / maxFs, 0.42), cxp = 27 + i * 84;
+    sh += '<circle cx="' + cxp + '" cy="25" r="' + r.toFixed(1)
+       + '" fill="none" stroke="var(--ink-3)" stroke-width="1"/>'
+       + '<text x="' + cxp + '" y="61" text-anchor="middle" font-size="10" fill="var(--ink-3)"'
+       + ' font-family="var(--f-mono)">' + (v >= 1000 ? Math.round(v / 1000) + 'k' : v) + '</text>';
+  });
+  ls.innerHTML = sh;
+
+  /* ---- bar table ---- */
+  var cs = FIRE.countries, maxFrp = Math.max.apply(null, cs.map(function (c) { return c.frp; }));
+  var maxMean = Math.max.apply(null, cs.map(function (c) { return c.fmean; }));
+  var bt = document.getElementById('bt');
+  cs.forEach(function (c) {
+    var wide = c.name.length > 18 ? c.name.replace('Bosnia and Herzegovina', 'Bosnia & Herz.')
+              .replace('Republic of Serbia', 'Serbia').replace('United Kingdom', 'UK') : c.name;
+    bt.insertAdjacentHTML('beforeend',
+      '<div class="cn">' + wide + '</div>'
+      + '<div class="cell"><div class="bar"><i style="width:' + (100 * c.frp / maxFrp).toFixed(1)
+        + '%;background:var(--r3)"></i></div><span class="val">' + fmt(c.frp) + '</span></div>'
+      + '<div class="cell m-hide"><div class="bar mean"><i style="width:'
+        + (100 * c.fmean / maxMean).toFixed(1) + '%"></i></div><span class="val">'
+        + c.fmean.toFixed(1) + '</span></div>'
+      + '<div class="cell r"><span class="n24' + (c.det24 ? '' : ' zero') + '">'
+        + fmt(c.det24) + '</span></div>');
+  });
+
+  /* ---- table ---- */
+  document.getElementById('tb').innerHTML = sorted.slice(0, 20).map(function (d) {
+    return '<tr><td>' + (d.act
+        ? '<span class="pill on"><span class="dot"></span>Burning</span>'
+        : '<span class="pill off"><span class="dot"></span>Quiet</span>')
+      + '</td><td>' + d.c + '</td>'
+      + '<td class="n">' + d.lat.toFixed(2) + '</td><td class="n">' + d.lon.toFixed(2) + '</td>'
+      + '<td class="n">' + fmt(d.n) + '</td><td class="n">' + fmt(d.n24) + '</td>'
+      + '<td class="n">' + fmt(d.fs) + '</td><td class="n">' + d.fm.toFixed(1) + '</td>'
+      + '<td class="n">' + fmt(d.fp) + '</td><td>' + d.t0 + '</td><td>' + d.t1 + '</td></tr>';
+  }).join('');
+
+  /* ---- redraw ---- */
+  drawDots();
+  var t; window.addEventListener('resize', function () {
+    clearTimeout(t); t = setTimeout(drawDots, 120);
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener && mq.addEventListener('change', drawDots);
+  }
+  new MutationObserver(drawDots).observe(document.documentElement,
+    { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
