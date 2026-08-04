@@ -46,26 +46,32 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans)
 .lbl { font-family:var(--sans); font-size:var(--t1); font-weight:600;
        letter-spacing:.11em; text-transform:uppercase; color:var(--ink3); }
 
-.mast { display:flex; flex-direction:column; gap:.9rem; }
-.instr { display:flex; flex-wrap:wrap; gap:.3rem .9rem; font-family:var(--sans);
-         font-size:var(--t1); letter-spacing:.02em; color:var(--ink3);
-         padding-bottom:.6rem; border-bottom:1px solid var(--rule); }
-.instr b { color:var(--ink2); font-weight:600; }
-h1 { font-family:var(--sans); font-weight:700; font-size:var(--t7); line-height:1.04;
-     letter-spacing:-.035em; margin:0; max-width:27ch; text-wrap:balance; }
+.mast { display:flex; flex-direction:column; gap:1.1rem; }
+.brandbar { display:flex; align-items:center; flex-wrap:wrap; gap:.65rem 1rem;
+            padding-bottom:.8rem; border-bottom:1px solid var(--rule); }
+.wm-inline { width:104px; aspect-ratio:2448/432; flex:none;
+             background:var(--wordmark) no-repeat left center/contain; }
+.kicker { font-family:var(--sans); font-size:var(--t1); font-weight:600;
+          letter-spacing:.13em; text-transform:uppercase; color:var(--brand);
+          padding-left:1rem; border-left:1px solid var(--rule); }
+.stamp { margin-left:auto; font-family:var(--mono); font-size:var(--t2); font-weight:600;
+         display:inline-flex; align-items:center; gap:.5rem; color:var(--ink2);
+         font-variant-numeric:tabular-nums; white-space:nowrap; }
+.stamp .dot { width:7px; height:7px; background:var(--live); flex:none; }
+.stamp b { color:var(--ink3); font-weight:600; letter-spacing:.1em;
+           text-transform:uppercase; font-family:var(--sans); font-size:var(--t1); }
+h1 { font-family:var(--sans); font-weight:700; font-size:var(--t7); line-height:1.05;
+     letter-spacing:-.035em; margin:0; max-width:30ch; text-wrap:balance; }
 .stand { font-size:var(--t4); color:var(--ink2); max-width:66ch; margin:0; }
 .stand b { color:var(--ink); font-weight:600; }
-
-.asof { display:grid; grid-template-columns:auto 1fr; gap:.4rem 1.4rem;
-        align-items:baseline; border-top:1px solid var(--ink);
-        border-bottom:1px solid var(--rule); padding:.85rem 0; }
-.asof .stamp { font-family:var(--mono); font-size:var(--t4); font-weight:600;
-               letter-spacing:-.01em; display:inline-flex; align-items:center; gap:.55rem;
-               font-variant-numeric:tabular-nums; white-space:nowrap; }
-.asof .stamp .dot { width:7px; height:7px; background:var(--live); flex:none; }
-.asof .q { font-size:var(--t2); color:var(--ink2); max-width:82ch; }
-.asof .q b { color:var(--ink); font-weight:600; }
-
+.instr { display:flex; flex-wrap:wrap; gap:.25rem .9rem; font-family:var(--sans);
+         font-size:var(--t1); letter-spacing:.02em; color:var(--ink3);
+         padding-top:.85rem; border-top:1px solid var(--hair); }
+.instr b { color:var(--ink2); font-weight:600; }
+.caveat { display:grid; grid-template-columns:auto 1fr; gap:.9rem; align-items:baseline;
+          font-size:var(--t2); color:var(--ink2); border-left:3px solid var(--live);
+          padding:.15rem 0 .15rem .9rem; margin:0; max-width:88ch; }
+.caveat b { color:var(--ink); font-weight:600; }
 .classes { display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
            background:var(--rule); border:1px solid var(--rule); }
 .cls { background:var(--panel); padding:1.15rem 1.2rem; display:flex;
@@ -241,27 +247,28 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
 <div class="wrap">
 
   <div class="mast">
+    <div class="brandbar">
+      <div class="wm-inline" role="img" aria-label="Amelia Space"></div>
+      <span class="kicker">Fire monitor</span>
+      <span class="stamp"><b>As of</b><span class="dot"></span><span id="p-asof"></span></span>
+    </div>
+
+    <h1 id="p-h1"></h1>
+    <p class="stand" id="p-stand"></p>
+
+    <p class="caveat"><span class="lbl">Caveat</span><span><b>A snapshot, not a live feed.</b>
+      Latest detection is <span id="p-latest"></span>. Near-real-time data is unvalidated and gets
+      revised, and a fire may have started, spread or been contained since. <b>Not for emergency
+      use</b> — consult EFFIS or your national civil protection service.</span></p>
+
     <div class="instr">
-      <span><b>VIIRS</b> 375 m thermal anomalies</span>
+      <span><b>Instrument</b> VIIRS 375 m thermal anomalies</span>
       <span><b>Platforms</b> Suomi-NPP · NOAA-20 · NOAA-21</span>
       <span><b>Window</b> <span id="p-win"></span></span>
+      <span><b>Region</b> 25°W–40°E, 34–64°N — Europe and Anatolia, African detections excluded</span>
       <span><b>Times</b> UK local · source UTC</span>
       <span><b>Projection</b> Lambert conformal conic 40°/60°N</span>
-      <span><b>Region</b> 25°W–40°E, 34–64°N — Europe and Anatolia</span>
-      <span><b>Excluded</b> African detections</span>
     </div>
-    <h1 id="p-h1">Most of these fires are not wildfires</h1>
-    <p class="stand" id="p-stand"></p>
-  </div>
-
-  <div class="asof">
-    <span class="lbl">As of</span>
-    <span class="stamp"><span class="dot"></span><span id="p-asof"></span></span>
-    <span class="lbl">Caveat</span>
-    <span class="q"><b>Static snapshot — this page does not update itself.</b> Latest detection
-      in the dataset is <span id="p-latest"></span>. Near-real-time detections are unvalidated
-      and get revised; a fire may have started, spread or been contained since retrieval.
-      <b>Not for emergency use</b> — consult EFFIS or your national civil protection service.</span>
   </div>
 
   <div class="mapcard">
@@ -443,14 +450,13 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
 
   var wfC = FIRE.classes.filter(function (c) { return c.key === 'wildfire'; })[0];
   var pctCx = Math.round(100 * wfC.cx / M.ncomp);
-  $('p-h1').textContent = pctCx < 50
-    ? 'Most of these fires are not wildfires'
-    : 'Europe’s fire week, ranked by radiative power';
-  $('p-stand').innerHTML = 'Of ' + fmt(M.n7) + ' thermal detections over seven days, only <b>'
-    + fmt(wfC.cx) + ' of ' + fmt(M.ncomp) + ' fire complexes — ' + pctCx
-    + '% — behave like wildfire</b>. Those few carry <b>' + wfC.frp_pct
-    + '% of all the radiative power</b>. The remainder is crop-residue burning and industrial '
-    + 'heat, which a detection count alone cannot tell apart.';
+  $('p-h1').textContent = fmt(wfC.cx) + ' of Europe’s ' + fmt(M.ncomp)
+    + ' fires behave like wildfire';
+  $('p-stand').innerHTML = 'That is ' + pctCx + '% of them, and they account for <b>'
+    + wfC.frp_pct + '% of all the radiative power</b> measured across ' + fmt(M.n7)
+    + ' detections this week. The other ' + fmt(M.ncomp - wfC.cx)
+    + ' are crop-residue burning and persistent industrial heat, which a detection count alone '
+    + 'cannot tell apart.';
 
   $('p-rules').innerHTML = 'A complex is called a <b>persistent heat source</b> when it appears on '
     + 'six or more separate days, never exceeds 60 MW, and stays within 4 km — the signature of a '
