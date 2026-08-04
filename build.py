@@ -36,6 +36,36 @@ R_EARTH_KM = 6371.0
 # minimum plausible detection count; guards against a truncated or empty feed
 SANITY_MIN_7D = 500
 
+# Fire-type heuristic. Validated against known geography: it puts ~63% of Algerian
+# complexes in "industrial" (gas flaring), ~89% of Ukrainian in "agricultural" (crop
+# residue), and 60% of Portuguese / 46% of Greek in "wildfire". Rules, not ground truth.
+IND_MIN_DAYS = 6      # detected on this many separate days ...
+IND_MAX_PEAK = 60     # ... while never exceeding this peak FRP (MW) ...
+IND_MAX_SPREAD = 4.0  # ... and staying within this footprint (km) -> static heat source
+WF_PEAK = 100.0       # peak FRP alone sufficient for wildfire
+WF_PEAK_SPREAD = 40.0 # or this peak combined with ...
+WF_SPREAD = 5.0       # ... this much spread (km)
+
+
+def classify(frp_max, days, spread_km):
+    if days >= IND_MIN_DAYS and frp_max < IND_MAX_PEAK and spread_km < IND_MAX_SPREAD:
+        return "industrial"
+    if frp_max >= WF_PEAK or (frp_max >= WF_PEAK_SPREAD and spread_km >= WF_SPREAD):
+        return "wildfire"
+    return "agricultural"
+
+
+CLASS_LABEL = {
+    "wildfire": "Likely wildfire",
+    "agricultural": "Short-lived burning",
+    "industrial": "Persistent heat source",
+}
+CLASS_NOTE = {
+    "wildfire": "High peak intensity, or moderate intensity spread over kilometres.",
+    "agricultural": "Brief, low intensity, small footprint \u2014 mostly crop-residue burning.",
+    "industrial": "Detected day after day from a fixed point \u2014 flares, plants, landfill.",
+}
+
 
 
 # ---------------------------------------------------------------- UK local time
@@ -111,7 +141,8 @@ def load_window(win):
                                       "%Y-%m-%d%H%M").replace(tzinfo=timezone.utc)
             except (KeyError, ValueError):
                 continue
-            rows.append({"lat": lat, "lon": lon, "frp": frp, "t": t, "plat": plat})
+            rows.append({"lat": lat, "lon": lon, "frp": frp, "t": t, "plat": plat,
+                         "dn": r.get("daynight", "")})
             n += 1
         log(f"  {n:,} usable rows")
     return rows
@@ -320,12 +351,20 @@ def main():
         lon = sum(r["lon"] for r in rs) / len(rs)
         x, y = to_px(lon, lat)
         n24 = sum(1 for r in rs if r["t"] >= cut)
+        km = [to_km(r["lon"], r["lat"]) for r in rs]
+        spread = max(max(k[0] for k in km) - min(k[0] for k in km),
+                     max(k[1] for k in km) - min(k[1] for k in km))
+        days = len({r["t"].date() for r in rs})
+        fmax = max(r["frp"] for r in rs)
+        cls = classify(fmax, days, spread)
         comp.append({
             "x": round(x, 1), "y": round(y, 1), "n": len(rs),
-            "fs": round(sum(r["frp"] for r in rs)), "fm": round(max(r["frp"] for r in rs), 1),
+            "fs": round(sum(r["frp"] for r in rs)), "fm": round(fmax, 1),
             "c": name, "act": n24 > 0, "n24": n24,
-            "fp": round(hull_area_ha([to_km(r["lon"], r["lat"]) for r in rs])),
-            "b": bucket(max(r["frp"] for r in rs)),
+            "fp": round(hull_area_ha(km)),
+            "b": bucket(fmax),
+            "cls": cls, "days": days, "spread": round(spread, 1),
+            "night": round(sum(1 for r in rs if r["dn"] == "N") / len(rs), 2),
             "lat": round(lat, 3), "lon": round(lon, 3),
             "t0": uk_bare(min(r["t"] for r in rs), "%d %b %H:%M"),
             "t1": uk_bare(max(r["t"] for r in rs), "%d %b %H:%M"),
@@ -343,9 +382,16 @@ def main():
     for r in r24:
         if r["country"] in agg:
             agg[r["country"]]["det24"] += 1
+    wf = {}
+    for c in comp:
+        w = wf.setdefault(c["c"], [0, 0])
+        w[0] += c["fs"]
+        if c["cls"] == "wildfire":
+            w[1] += c["fs"]
     countries = sorted(
         [{"name": k, "det": v["det"], "frp": round(v["frp"]),
-          "det24": v["det24"], "fmean": round(v["frp"] / v["det"], 1)}
+          "det24": v["det24"], "fmean": round(v["frp"] / v["det"], 1),
+          "wfpct": (round(100 * wf[k][1] / wf[k][0]) if k in wf and wf[k][0] else 0)}
          for k, v in agg.items()], key=lambda d: -d["frp"])[:14]
 
     # country outlines + neatline
@@ -364,6 +410,26 @@ def main():
     fp = [to_px(a, b) for a, b in edge]
     frame = "M" + "L".join(f"{a:.1f} {b:.1f}" for a, b in fp) + "Z"
 
+    classes = []
+    for key in ("wildfire", "agricultural", "industrial"):
+        sub = [c for c in comp if c["cls"] == key]
+        classes.append({
+            "key": key, "label": CLASS_LABEL[key], "note": CLASS_NOTE[key],
+            "cx": len(sub), "det": sum(c["n"] for c in sub),
+            "frp": round(sum(c["fs"] for c in sub)),
+            "act": sum(1 for c in sub if c["act"]),
+        })
+    tot_frp = max(sum(cl["frp"] for cl in classes), 1)
+    tot_det = max(sum(cl["det"] for cl in classes), 1)
+    for cl in classes:
+        cl["frp_pct"] = round(100 * cl["frp"] / tot_frp)
+        cl["det_pct"] = round(100 * cl["det"] / tot_det)
+    for cl in classes:
+        log(f"  {cl['label']:24s} {cl['cx']:5d} complexes  {cl['det']:6d} det  "
+            f"{cl['frp']:8d} MW  ({cl['frp_pct']}% of power, {cl['det_pct']}% of detections)")
+
+    top5 = sorted(comp, key=lambda d: -d["fm"])[:5]
+
     now = datetime.now(timezone.utc)
     payload = {
         "meta": {
@@ -378,12 +444,16 @@ def main():
             "W": W, "H": H, "breaks": FRP_BREAKS,
         },
         "paths": paths, "frame": frame, "dots": dots, "comp": comp, "countries": countries,
+        "classes": classes, "top5": top5,
     }
 
     with open(os.path.join(HERE, "template.html")) as f:
         tpl = f.read()
     if "/*PAYLOAD*/" not in tpl:
         raise SystemExit("FATAL: template.html has no /*PAYLOAD*/ marker")
+    if "/*FONTS*/" in tpl:
+        with open(os.path.join(HERE, "fonts.css")) as f:
+            tpl = tpl.replace("/*FONTS*/", f.read())
     html = tpl.replace("/*PAYLOAD*/", "const FIRE=" + json.dumps(payload, separators=(",", ":")) + ";")
     with open(args.out, "w") as f:
         f.write(html)
