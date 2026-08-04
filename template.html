@@ -78,6 +78,7 @@ h1.kicker { margin:0; }
 .plat s { text-decoration:none; font-family:var(--mono); font-weight:600; color:var(--ink3);
           font-variant-numeric:tabular-nums; }
 .plat.stale { color:var(--live); border-color:var(--live); }
+.plat.coverage { border-style:dashed; }
 .plat.stale s { color:var(--live); }
 .fresh .note2 { grid-column:2 / -1; font-size:var(--t2); color:var(--ink3); max-width:92ch; }
 .fresh .note2 b { color:var(--ink2); font-weight:600; }
@@ -311,8 +312,8 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   </div>
 
     <div class="instr">
-      <span><b>Instrument</b> VIIRS 375 m thermal anomalies</span>
-      <span><b>Platforms</b> Suomi-NPP · NOAA-20 · NOAA-21</span>
+      <span><b>Analysis</b> VIIRS 375 m — Suomi-NPP · NOAA-20 · NOAA-21</span>
+      <span><b>Coverage only</b> MODIS 1 km — Terra · Aqua</span>
       <span><b>Window</b> <span id="p-win"></span></span>
       <span><b>Region</b> 25°W–40°E, 34–64°N — Europe and Anatolia, African detections excluded</span>
       <span><b>Times</b> UK local · source UTC</span>
@@ -396,6 +397,14 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
         <p>Smoke and cloud block detection, and each satellite passes roughly twice daily, so a
           fire that ignited and was contained between overpasses never appears. Absence of
           detections is not evidence of absence of fire.</p>
+        <h3>Two sensors, one analysis</h3>
+        <p>Clustering, classification, radiative-power totals and the country table use VIIRS
+          375 m only. MODIS at 1 km is fetched as well, but solely to tighten coverage: Terra and
+          Aqua add four passes a day and more than halve the longest gap with nobody looking. Its
+          detections appear in the background density layer and in the freshness figures, never in
+          the totals — a 1 km footprint is seven times coarser, its detection threshold is higher,
+          and the classification thresholds are calibrated on VIIRS radiative power. Mixing them
+          would move every headline number without saying so.</p>
         <h3>Coverage</h3>
         <p>The frame spans 25°W–40°E, 33–64°N, excluding <span id="p-out"></span>% of detections,
           which are still counted in every figure. Seven days is the cap on NASA's open feeds.</p>
@@ -467,14 +476,17 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   var h = Math.floor(M.age_min / 60), mn = M.age_min % 60;
   $('p-age').textContent = (h ? h + ' h ' : '') + mn + ' min';
   $('p-plats').innerHTML = M.plats.map(function (p) {
-    return '<span class="plat' + (p.stale ? ' stale' : '') + '">' + p.name
+    return '<span class="plat' + (p.stale ? ' stale' : '')
+      + (p.sensor === 'MODIS' ? ' coverage' : '') + '">' + p.name
       + '<s>' + p.lag_h.toFixed(1) + ' h</s>' + (p.stale ? '<s>STALE</s>' : '') + '</span>';
   }).join('');
   var stale = M.plats.filter(function (p) { return p.stale; });
   $('p-fresh').innerHTML = 'Rebuilt hourly, but freshness is set upstream: NASA processes '
-    + 'near-real-time detections about <b>4 hours</b> after observation, and the satellites pass '
-    + 'roughly six times a day, so the longest unobserved gap in this window was <b>'
-    + M.gap_max.toFixed(1) + ' hours</b>. Nothing here can be fresher than that.'
+    + 'near-real-time detections about three hours after observation. Five platforms across two '
+    + 'sensors give roughly ten passes a day, which holds the longest unobserved gap in this '
+    + 'window to <b>' + M.gap_max.toFixed(1) + ' hours</b>. Nothing here can be fresher than that. '
+    + 'Dashed chips are MODIS at 1 km, carried for coverage only — the analysis runs on the '
+    + fmt(M.n7) + ' VIIRS detections at 375 m.'
     + (stale.length
         ? ' <b>' + stale.map(function (p) { return p.name; }).join(' and ')
           + ' ' + (stale.length > 1 ? 'feeds are' : 'feed is') + ' currently degraded</b> — no new '

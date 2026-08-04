@@ -17,11 +17,20 @@ from datetime import datetime, timedelta, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIRMS = "https://firms.modaps.eosdis.nasa.gov/data/active_fire"
+# (path, filename stem, label, sensor, in_analysis)
+# VIIRS at 375 m drives the analysis. MODIS at 1 km is carried for coverage only:
+# it adds Terra and Aqua, four more passes a day, which more than halves the longest
+# unobserved gap. It is deliberately kept OUT of clustering, classification, radiative
+# power totals and the country table - its footprint is seven times coarser, its
+# detection threshold higher, and the classification thresholds are calibrated on
+# VIIRS FRP. Mixing them would silently move every headline number.
 SATS = [
-    ("suomi-npp-viirs-c2", "SUOMI_VIIRS_C2", "Suomi-NPP"),
-    ("noaa-20-viirs-c2",   "J1_VIIRS_C2",    "NOAA-20"),
-    ("noaa-21-viirs-c2",   "J2_VIIRS_C2",    "NOAA-21"),
+    ("suomi-npp-viirs-c2", "SUOMI_VIIRS_C2", "Suomi-NPP", "VIIRS", True),
+    ("noaa-20-viirs-c2",   "J1_VIIRS_C2",    "NOAA-20",   "VIIRS", True),
+    ("noaa-21-viirs-c2",   "J2_VIIRS_C2",    "NOAA-21",   "VIIRS", True),
+    ("modis-c6.1",         "MODIS_C6_1",     "Terra/Aqua", "MODIS", False),
 ]
+MODIS_MIN_CONF = 30      # MODIS confidence is 0-100, not low/nominal/high
 
 # map frame (drawn) and projection constants
 BB = (-25.0, 34.0, 40.0, 64.0)
@@ -136,13 +145,20 @@ def fetch(url, tries=4):
 
 def load_window(win):
     rows = []
-    for slug, stem, plat in SATS:
+    for slug, stem, plat, sensor, in_analysis in SATS:
         url = f"{FIRMS}/{slug}/csv/{stem}_Europe_{win}.csv"
         log(f"fetching {stem} {win}")
         rd = csv.DictReader(io.StringIO(fetch(url)))
         n = 0
         for r in rd:
-            if r.get("confidence") == "low":
+            conf = r.get("confidence", "")
+            if sensor == "MODIS":
+                try:
+                    if float(conf) < MODIS_MIN_CONF:
+                        continue
+                except ValueError:
+                    continue
+            elif conf == "low":
                 continue
             try:
                 lat = float(r["latitude"]); lon = float(r["longitude"])
@@ -152,7 +168,8 @@ def load_window(win):
             except (KeyError, ValueError):
                 continue
             rows.append({"lat": lat, "lon": lon, "frp": frp, "t": t, "plat": plat,
-                         "dn": r.get("daynight", "")})
+                         "dn": r.get("daynight", ""), "sensor": sensor,
+                         "an": in_analysis})
             n += 1
         log(f"  {n:,} usable rows")
     return rows
@@ -382,20 +399,25 @@ def main():
             f"({', '.join(sorted(EXCLUDE_CONTINENTS))}; {frp_out:,.0f} MW)")
         return out
 
-    r7 = keep(r7, "7-day")
-    r24 = keep(r24, "24-hour")
+    r7_all = keep(r7, "7-day")
+    r24_all = keep(r24, "24-hour")
+    r7 = [r for r in r7_all if r["an"]]
+    r24 = [r for r in r24_all if r["an"]]
+    log(f"analysis set (VIIRS 375 m): {len(r7):,} of {len(r7_all):,} 7-day detections; "
+        f"MODIS carried for coverage only")
     if len(r7) < SANITY_MIN_7D:
         raise SystemExit("FATAL: too few detections after continental filtering")
 
     cut = min(r["t"] for r in r24)
     inframe = lambda r: BB[0] <= r["lon"] <= BB[2] and BB[1] <= r["lat"] <= BB[3]
     f7 = [r for r in r7 if inframe(r)]
+    f7_all = [r for r in r7_all if inframe(r)]
     log(f"{len(r7)-len(f7):,} of {len(r7):,} detections outside map frame "
         f"({100*(len(r7)-len(f7))/len(r7):.1f}%)")
 
     # density grid
     cellmax = {}
-    for r in f7:
+    for r in f7_all:
         k = (round(r["lon"] / GRID_DEG), round(r["lat"] / GRID_DEG))
         if r["frp"] > cellmax.get(k, -1):
             cellmax[k] = r["frp"]
@@ -514,19 +536,20 @@ def main():
 
     # ---- freshness: measured, not asserted ----
     now = datetime.now(timezone.utc)
-    latest = max(r["t"] for r in r7)
+    latest = max(r["t"] for r in r7_all)
     age_min = int((now - latest).total_seconds() // 60)
     plats = []
-    for name in sorted({r["plat"] for r in r7}):
-        pts = [r["t"] for r in r7 if r["plat"] == name]
+    for name in sorted({r["plat"] for r in r7_all}):
+        pts = [r["t"] for r in r7_all if r["plat"] == name]
+        sens = next(r["sensor"] for r in r7_all if r["plat"] == name)
         lag = (now - max(pts)).total_seconds() / 3600
         plats.append({"name": name, "n": len(pts), "lag_h": round(lag, 1),
                       "last": uk_str(max(pts), "%d %b %H:%M"),
-                      "stale": lag > STALE_PLATFORM_H})
+                      "stale": lag > STALE_PLATFORM_H, "sensor": sens})
         flag = "  STALE" if lag > STALE_PLATFORM_H else ""
         log(f"  {name:10s} {len(pts):6,d} det   newest {max(pts):%d %b %H:%M}Z   "
             f"lag {lag:5.1f} h{flag}")
-    obs = sorted({r["t"] for r in r7})
+    obs = sorted({r["t"] for r in r7_all})
     gaps = [(obs[i + 1] - obs[i]).total_seconds() / 3600 for i in range(len(obs) - 1)]
     gap_max = round(max(gaps), 1) if gaps else 0.0
     log(f"  data age {age_min // 60} h {age_min % 60} min | longest observation gap {gap_max} h")
@@ -543,6 +566,7 @@ def main():
             "retrieved": uk_str(now, "%d %B %Y, %H:%M").lstrip("0"),
             "W": W, "H": H, "breaks": FRP_BREAKS,
             "age_min": age_min, "gap_max": gap_max, "plats": plats,
+            "n7_all": len(r7_all), "n_modis": len(r7_all) - len(r7),
             "stale_h": STALE_PLATFORM_H,
         },
         "paths": paths, "frame": frame, "dots": dots, "comp": comp, "countries": countries,

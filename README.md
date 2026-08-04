@@ -32,8 +32,9 @@ of it downloading.
 
 ## What the pipeline does
 
-1. Downloads six CSVs from FIRMS — 24-hour and 7-day windows for Suomi-NPP, NOAA-20 and
-   NOAA-21. These are the open feeds; no API key needed, but they cap at 7 days.
+1. Downloads eight CSVs from FIRMS — 24-hour and 7-day windows for VIIRS on Suomi-NPP,
+   NOAA-20 and NOAA-21, plus MODIS C6.1 (Terra and Aqua). Open feeds; no API key needed,
+   but they cap at 7 days.
 2. Drops `confidence == "low"` detections.
 3. Attributes each detection to a country by ray-casting against `boundaries.json`,
    with a bounding-box prefilter.
@@ -53,6 +54,16 @@ claim, the country comparison in the bar-table lede, the map callout, the as-of 
 and the out-of-frame percentage. **Do not hardcode a country name, a percentage or a
 date into the prose**; it will go stale on the next refresh and start lying.
 
+## Two sensors, one analysis
+
+`SATS` in `build.py` carries an `in_analysis` flag per platform. VIIRS 375 m drives
+clustering, classification, FRP totals and the country table. MODIS 1 km is fetched for
+coverage only — it appears in the density layer and the freshness figures and nowhere else.
+Its footprint is seven times coarser, its detection threshold higher, and the classification
+thresholds (`WF_PEAK` and friends) are calibrated on VIIRS radiative power; letting MODIS
+into the totals would move every headline number silently. Note MODIS reports confidence as
+0–100 rather than low/nominal/high, handled by `MODIS_MIN_CONF`.
+
 ## Scope
 
 `EXCLUDE_CONTINENTS` in `build.py` drops detections attributed to those continents from
@@ -70,8 +81,9 @@ longest unobserved gap in the window, and marks a platform STALE past
 `STALE_PLATFORM_H` hours (default 12; normal end-to-end lag is around 4).
 
 Hourly rebuilds cannot beat the upstream floor: NASA processes near-real-time detections
-roughly 4 hours after observation, and the three satellites pass about six times a day, so
-several hours can elapse with nobody looking. There is no way to make the page live — the
+roughly three hours after observation. Five platforms across two sensors give about ten
+passes a day, which held the longest unobserved gap to 3.4 h when this was written — adding
+MODIS more than halved it from 8.8 h. There is no way to make the page live — the
 artifact runtime grants no network-fetch capability, so a published page cannot call FIRMS
 itself.
 
