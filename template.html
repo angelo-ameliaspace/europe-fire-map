@@ -212,7 +212,8 @@
       <span id="p-headline"></span></p>
     <div class="provenance">
       <span><b>Source</b> NASA FIRMS · VIIRS 375 m NRT (Suomi-NPP, NOAA-20, NOAA-21)</span>
-      <span><b>Window</b> <span id="p-win"></span> UTC</span>
+      <span><b>Window</b> <span id="p-win"></span></span>
+      <span><b>Times</b> UK local · source data UTC</span>
       <span><b>Projection</b> Lambert conformal conic, 40°/60°N</span>
     </div>
   </header>
@@ -221,7 +222,7 @@
     <span class="lbl">As of</span>
     <span class="stamp"><span class="dot"></span><span id="p-asof"></span></span>
     <span class="qual"><b>Static snapshot — this page does not update itself.</b>
-      Latest detection in the dataset is <span id="p-latest"></span> UTC. VIIRS near-real-time
+      Latest detection in the dataset is <span id="p-latest"></span>. VIIRS near-real-time
       detections are unvalidated and get revised; a fire may have started, spread or been
       contained since retrieval.</span>
   </div>
@@ -372,7 +373,7 @@
   document.getElementById('p-out').textContent = M.outpct;
   document.getElementById('p-foot').textContent = M.retrieved;
   document.getElementById('t-24').textContent = fmt(M.n24);
-  document.getElementById('t-24s').textContent = M.win24[0] + ' → ' + M.win24[1] + ' UTC';
+  document.getElementById('t-24s').textContent = M.win24[0] + ' → ' + M.win24[1];
   document.getElementById('t-7').textContent = fmt(M.n7);
   document.getElementById('t-7s').textContent =
     'Shown as ' + fmt(M.ncell) + ' grid cells at 3 km; ' + M.outpct

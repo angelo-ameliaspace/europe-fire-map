@@ -13,7 +13,7 @@ rather than publishing a broken or empty page.
 """
 
 import argparse, csv, io, json, math, os, sys, time, urllib.error, urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIRMS = "https://firms.modaps.eosdis.nasa.gov/data/active_fire"
@@ -35,6 +35,41 @@ R_EARTH_KM = 6371.0
 
 # minimum plausible detection count; guards against a truncated or empty feed
 SANITY_MIN_7D = 500
+
+
+
+# ---------------------------------------------------------------- UK local time
+# The audience is UK-based, so every time shown on the page is Europe/London.
+# Source FIRMS timestamps are UTC; this is a display conversion only.
+def _last_sunday(year, month):
+    d = datetime(year, month, 31, tzinfo=timezone.utc)
+    while d.month != month:
+        d -= timedelta(days=1)
+    while d.weekday() != 6:
+        d -= timedelta(days=1)
+    return d.replace(hour=1, minute=0, second=0, microsecond=0)
+
+
+def uk(dt):
+    """UTC datetime -> (local datetime, 'BST'|'GMT'). zoneinfo when available,
+    otherwise the EU rule: BST from 01:00 UTC last Sunday in March to 01:00 UTC
+    last Sunday in October."""
+    try:
+        from zoneinfo import ZoneInfo
+        loc = dt.astimezone(ZoneInfo("Europe/London"))
+        return loc, ("BST" if loc.utcoffset() != timedelta(0) else "GMT")
+    except Exception:  # noqa: BLE001  (missing tzdata in a minimal container)
+        summer = _last_sunday(dt.year, 3) <= dt < _last_sunday(dt.year, 10)
+        return (dt + timedelta(hours=1), "BST") if summer else (dt, "GMT")
+
+
+def uk_str(dt, fmt):
+    loc, tz = uk(dt)
+    return loc.strftime(fmt) + " " + tz
+
+
+def uk_bare(dt, fmt):
+    return uk(dt)[0].strftime(fmt)
 
 
 def log(*a):
@@ -292,8 +327,8 @@ def main():
             "fp": round(hull_area_ha([to_km(r["lon"], r["lat"]) for r in rs])),
             "b": bucket(max(r["frp"] for r in rs)),
             "lat": round(lat, 3), "lon": round(lon, 3),
-            "t0": min(r["t"] for r in rs).strftime("%d %b %H:%M"),
-            "t1": max(r["t"] for r in rs).strftime("%d %b %H:%M"),
+            "t0": uk_bare(min(r["t"] for r in rs), "%d %b %H:%M"),
+            "t1": uk_bare(max(r["t"] for r in rs), "%d %b %H:%M"),
         })
     comp.sort(key=lambda d: -d["fs"])
     log(f"{len(comp):,} complexes, {sum(1 for c in comp if c['act']):,} active in last 24 h")
@@ -332,15 +367,14 @@ def main():
     now = datetime.now(timezone.utc)
     payload = {
         "meta": {
-            "win7": [min(r["t"] for r in r7).strftime("%d %b %Y %H:%M"),
-                     max(r["t"] for r in r7).strftime("%d %b %Y %H:%M")],
-            "win24": [min(r["t"] for r in r24).strftime("%d %b %H:%M"),
-                      max(r["t"] for r in r24).strftime("%d %b %H:%M")],
+            "win7": [uk_str(min(r["t"] for r in r7), "%d %b %Y %H:%M"),
+                     uk_str(max(r["t"] for r in r7), "%d %b %Y %H:%M")],
+            "win24": [uk_str(min(r["t"] for r in r24), "%d %b %H:%M"),
+                      uk_str(max(r["t"] for r in r24), "%d %b %H:%M")],
             "n7": len(r7), "n24": len(r24), "ncomp": len(comp),
             "nact": sum(1 for c in comp if c["act"]), "ncell": len(dots),
             "outpct": round(100 * (len(r7) - len(f7)) / len(r7), 1),
-            "retrieved": now.strftime("%-d %B %Y, %H:%M UTC") if os.name != "nt"
-                         else now.strftime("%d %B %Y, %H:%M UTC"),
+            "retrieved": uk_str(now, "%d %B %Y, %H:%M").lstrip("0"),
             "W": W, "H": H, "breaks": FRP_BREAKS,
         },
         "paths": paths, "frame": frame, "dots": dots, "comp": comp, "countries": countries,
@@ -359,7 +393,7 @@ def main():
     log(f"wrote {args.out} ({os.path.getsize(args.out)/1024:.0f} KB)")
     log(f"headline: {top['c']} {top['lat']}/{top['lon']} {top['fs']:,} MW "
         f"= {round(100*top['fs']/max(live,1))}% of active radiative power")
-    log(f"as of {payload['meta']['retrieved']}")
+    log(f"as of {payload['meta']['retrieved']}  (UTC {now:%Y-%m-%d %H:%M})")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ active-fire detections, and republishes it to a fixed Claude artifact URL.
 **Artifact (do not change):**
 `https://claude.ai/code/artifact/200730f4-270f-4758-b887-70fcef594c1e`
 
-Refreshed twice daily by a Claude Code cloud routine. Publishing to that exact URL is
+Refreshed twice daily (07:00 and 19:00 UK) by a Claude Code cloud routine. Publishing to that exact URL is
 what keeps the link stable for everyone it has been shared with — publishing without it
 mints a new artifact and viewers silently keep seeing stale data on the old link.
 
@@ -50,6 +50,13 @@ data-dependent statement is generated at build time from the payload — the hea
 claim, the country comparison in the bar-table lede, the map callout, the as-of stamp,
 and the out-of-frame percentage. **Do not hardcode a country name, a percentage or a
 date into the prose**; it will go stale on the next refresh and start lying.
+
+## Times
+
+Every timestamp rendered on the page is **Europe/London**, labelled BST or GMT, because
+the audience is UK-based. FIRMS source timestamps are UTC and are converted at build
+time only. `uk()` uses `zoneinfo` when the container has tzdata and falls back to the EU
+DST rule otherwise, so it never crashes on a minimal image.
 
 ## Failure behaviour
 
