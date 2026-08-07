@@ -329,82 +329,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   </section>
 
 
-  <section>
-    <h2>Detection counts rank the wrong countries</h2>
-    <p class="lede" id="p-contrast"></p>
-    <div class="bt" id="bt">
-      <div class="h lbl">Country</div>
-      <div class="h lbl">Cumulative FRP (MW)</div>
-      <div class="h lbl m-h">Mean FRP per detection</div>
-      <div class="h lbl r m-h">Wildfire</div>
-      <div class="h lbl r">24 h</div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Twenty most energetic complexes</h2>
-    <p class="lede">Grouped by 3 km single-linkage clustering, minimum five detections. Footprint
-      is the convex hull of a complex's detections — an indication of how far it has spread,
-      <em>not</em> a burned-area measurement.</p>
-    <div class="tw">
-      <table>
-        <thead><tr>
-          <th>Type</th><th>State</th><th>Country</th><th class="n">Lat</th><th class="n">Lon</th>
-          <th class="n">Det.</th><th class="n">24 h</th><th class="n">Cum. FRP</th>
-          <th class="n">Peak</th><th class="n">Days</th><th class="n">Spread</th>
-          <th class="n">Footprint</th><th>First seen</th><th>Last seen</th>
-        </tr></thead>
-        <tbody id="tb"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <section>
-    <h2>How to read this, and what it does not say</h2>
-    <div class="note warn full">
-      <h3>Not an emergency product</h3>
-      <p>This is an analytical view of satellite thermal detections, not a fire warning service.
-        It is unvalidated, not continuous and not authoritative. For operational information use
-        the European Forest Fire Information System, your national civil protection service, or
-        the emergency number 112.</p>
-    </div>
-
-    <div class="notes">
-      <div class="note">
-        <h3>Detections are not fires</h3>
-        <p>A 375 m pixel flags a thermal anomaly. One fire generates many detections across many
-          overpasses; clustering reduces the double-counting but cannot eliminate it.</p>
-        <h3>Radiative power is not burned area</h3>
-        <p>FRP measures energy emitted at the instant of overpass. It indicates intensity, not
-          extent. Burned area needs post-fire optical mapping — Sentinel-2 dNBR — or the official
-          EFFIS perimeters.</p>
-        <h3>Gaps are invisible</h3>
-        <p>Smoke and cloud block detection, and the newest detections may not yet have formed a
-          complex, so absence of a mark is not evidence of absence of fire.</p>
-      </div>
-      <div class="note">
-        <h3>The classification is a heuristic</h3>
-        <p id="p-rules"></p>
-        <p>It takes no land-cover input, so an intense agricultural fire can be labelled wildfire
-          and a slow-burning peat fire can be labelled a persistent heat source. It was checked
-          against known geography — Algerian gas flaring, Ukrainian crop residue, Iberian and Greek
-          wildfire — and behaves sensibly on all four. That is evidence of usefulness, not proof of
-          correctness.</p>
-        <h3>Two sensors, one analysis</h3>
-        <p>Clustering, classification, radiative-power totals and the country table use VIIRS
-          375 m only. MODIS at 1 km is fetched as well, solely to tighten coverage: Terra and Aqua
-          add four passes a day and more than halve the longest gap with nobody looking. Its
-          detections appear in the density layer and among the newest detections, never in the
-          totals — a 1 km footprint is seven times coarser and the thresholds are calibrated on
-          VIIRS radiative power.</p>
-        <h3>Coverage</h3>
-        <p>The frame spans 11°W–37°E, 34–63°N, tightened to the data — it excludes
-          <span id="p-out"></span>% of detections, which are still counted in every figure. Seven
-          days is the cap on NASA's open feeds, and African detections are excluded throughout.</p>
-      </div>
-    </div>
-
-  </section>
 
   <footer>
     We acknowledge the use of data and imagery from LANCE FIRMS, operated by NASA/GSFC/ESDIS with
@@ -456,14 +380,9 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
   /* ---- masthead ---- */
   $('p-win').textContent = M.win7[0] + ' – ' + M.win7[1];
   $('p-asof').textContent = M.retrieved;
-  $('p-out').textContent = M.outpct;
   $('p-foot').textContent = M.retrieved;
 
 
-  $('p-rules').innerHTML = 'A complex is called a <b>persistent heat source</b> when it appears on '
-    + 'six or more separate days, never exceeds 60 MW, and stays within 4 km — the signature of a '
-    + 'flare or a plant. It is called <b>likely wildfire</b> when peak power reaches 100 MW, or '
-    + '40 MW while spreading across 5 km or more. Everything else is <b>short-lived burning</b>.';
 
   /* ---- class strip ---- */
   $('cls-strip').innerHTML = FIRE.classes.map(function (c) {
@@ -694,49 +613,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
     + '<text x="270" y="62" text-anchor="middle" font-size="9" fill="var(--ink3)"'
     + ' font-family="var(--mono)">QUIET</text>';
   $('lg-size').innerHTML = sh;
-
-  /* ---- country bar table ---- */
-  var cs = FIRE.countries;
-  var mF = Math.max.apply(null, cs.map(function (c) { return c.frp; }));
-  var mM = Math.max.apply(null, cs.map(function (c) { return c.fmean; }));
-  var byDet = cs.slice().sort(function (a, b) { return b.det - a.det; })[0];
-  var byInt = cs.slice().sort(function (a, b) { return b.fmean - a.fmean; })[0];
-  $('p-contrast').textContent = (byDet.name === byInt.name)
-    ? byDet.name + ' leads on both detection count and mean intensity, so its total is not an artefact of counting.'
-    : byDet.name + ' records the most detections of any country (' + fmt(byDet.det)
-      + '), averaging ' + byDet.fmean.toFixed(1) + ' MW each against ' + byInt.name + '’s '
-      + byInt.fmean.toFixed(1) + ' MW. The right-hand column gives the share of each country’s '
-      + 'radiative power that comes from complexes behaving like wildfire.';
-  var bt = $('bt');
-  cs.forEach(function (c) {
-    var nm = c.name.replace('Bosnia and Herzegovina', 'Bosnia & Herz.')
-      .replace('Republic of Serbia', 'Serbia').replace('United Kingdom', 'UK');
-    bt.insertAdjacentHTML('beforeend',
-      '<div class="cn">' + nm + '</div>'
-      + '<div class="cell"><span class="bar"><i style="width:' + (100 * c.frp / mF).toFixed(1)
-        + '%;background:var(--r3)"></i></span><span class="v">' + fmt(c.frp) + '</span></div>'
-      + '<div class="cell m-h"><span class="bar mean"><i style="width:'
-        + (100 * c.fmean / mM).toFixed(1) + '%"></i></span><span class="v">'
-        + c.fmean.toFixed(1) + '</span></div>'
-      + '<div class="r m-h"><span class="wf ' + (c.wfpct >= 50 ? 'hi' : 'lo') + '">'
-        + c.wfpct + '%</span></div>'
-      + '<div class="r"><span class="wf' + (c.det24 ? '' : ' lo') + '">' + fmt(c.det24) + '</span></div>');
-  });
-
-  /* ---- complex table ---- */
-  $('tb').innerHTML = comp.slice(0, 20).map(function (d) {
-    var short = d.cls === 'wildfire' ? 'wildfire'
-      : (d.cls === 'agricultural' ? 'short-lived' : 'persistent');
-    return '<tr><td><span class="chip ' + d.cls + '">' + short + '</span></td>'
-      + '<td><span class="state ' + (d.act ? 'on' : 'off') + '"><span class="d"></span>'
-        + (d.act ? 'Burning' : 'Quiet') + '</span></td>'
-      + '<td>' + d.c + '</td><td class="n">' + d.lat.toFixed(2) + '</td>'
-      + '<td class="n">' + d.lon.toFixed(2) + '</td><td class="n">' + fmt(d.n) + '</td>'
-      + '<td class="n">' + fmt(d.n24) + '</td><td class="n">' + fmt(d.fs) + '</td>'
-      + '<td class="n">' + d.fm.toFixed(1) + '</td><td class="n">' + d.days + '</td>'
-      + '<td class="n">' + d.spread.toFixed(1) + '</td><td class="n">' + fmt(d.fp) + '</td>'
-      + '<td>' + d.t0 + '</td><td>' + d.t1 + '</td></tr>';
-  }).join('');
 
   drawDots();
   var t;
