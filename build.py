@@ -55,6 +55,11 @@ EXCLUDE_CONTINENTS = {"Africa"}
 # and flagged on the page. Normal end-to-end NRT lag is roughly 4 hours.
 STALE_PLATFORM_H = 12
 
+# Wildfire-only view. The other two classes are ~90% of complexes but a minority
+# of the radiative power - crop-residue burning and fixed industrial heat. Carrying
+# them buried the fires that matter under thousands of marks nobody was watching.
+WILDFIRE_ONLY = True
+
 # Fire-type heuristic. Validated against known geography: it puts ~63% of Algerian
 # complexes in "industrial" (gas flaring), ~89% of Ukrainian in "agricultural" (crop
 # residue), and 60% of Portuguese / 46% of Greek in "wildfire". Rules, not ground truth.
@@ -456,6 +461,7 @@ def main():
         cls = classify(fmax, days, spread)
         pnm, padm, pdist, pbrg, ppop = nearest_place(lon, lat, places)
         comp.append({
+            "_rows": g,
             "x": round(x, 1), "y": round(y, 1), "n": len(rs),
             "fs": round(sum(r["frp"] for r in rs)), "fm": round(fmax, 1),
             "c": name, "act": n24 > 0, "n24": n24,
@@ -471,6 +477,35 @@ def main():
         })
     comp.sort(key=lambda d: -d["fs"])
     log(f"{len(comp):,} complexes, {sum(1 for c in comp if c['act']):,} active in last 24 h")
+
+    if WILDFIRE_ONLY:
+        n_all = len(comp)
+        keep = set()
+        for c in comp:
+            if c["cls"] == "wildfire":
+                keep.update(c["_rows"])
+        comp = [c for c in comp if c["cls"] == "wildfire"]
+        wf_rows = [f7[i] for i in sorted(keep)]
+        # density grid rebuilt from wildfire detections only, so the backdrop
+        # agrees with the marks instead of showing every crop fire in Ukraine
+        cellmax = {}
+        for r in wf_rows:
+            k = (round(r["lon"] / GRID_DEG), round(r["lat"] / GRID_DEG))
+            if r["frp"] > cellmax.get(k, -1):
+                cellmax[k] = r["frp"]
+        dots = []
+        for (gx, gy), frp in cellmax.items():
+            x, y = to_px(gx * GRID_DEG, gy * GRID_DEG)
+            dots.append([round(x, 1), round(y, 1), bucket(frp)])
+        r7 = wf_rows
+        r24 = [r for r in wf_rows if r["t"] >= cut]
+        if not comp:
+            raise SystemExit("FATAL: no wildfire complexes - refusing to publish an empty map")
+        log(f"wildfire-only: kept {len(comp)} of {n_all:,} complexes, "
+            f"{len(wf_rows):,} detections, {len(dots):,} grid cells, "
+            f"{sum(1 for c in comp if c['act'])} active in last 24 h")
+    for c in comp:
+        c.pop("_rows", None)
 
     # country table
     agg = {}
@@ -524,6 +559,9 @@ def main():
     for cl in classes:
         cl["frp_pct"] = round(100 * cl["frp"] / tot_frp)
         cl["det_pct"] = round(100 * cl["det"] / tot_det)
+    # drop classes the filter emptied, so the legend and type filter show
+    # only what is actually on the map
+    classes = [c for c in classes if c["cx"]]
     for cl in classes:
         log(f"  {cl['label']:24s} {cl['cx']:5d} complexes  {cl['det']:6d} det  "
             f"{cl['frp']:8d} MW  ({cl['frp_pct']}% of power, {cl['det_pct']}% of detections)")
