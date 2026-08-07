@@ -311,13 +311,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
       <span><b>Projection</b> Lambert conformal conic 40°/60°N</span>
     </div>
 
-  <section>
-    <h2>What the satellites are actually seeing</h2>
-    <p class="lede">Each complex is classified by how it behaves across the week — how intense it
-      becomes, how far it spreads, and whether it keeps reappearing from one fixed point. A gas
-      flare and a forest fire both register as heat. They do not behave alike.</p>
-    <div class="classes" id="cls-strip"></div>
-  </section>
 
   <section>
     <h2>Five most intense fires burning now</h2>
@@ -384,17 +377,6 @@ footer { border-top:1px solid var(--rule); padding-top:1rem; font-size:var(--t1)
 
 
 
-  /* ---- class strip ---- */
-  $('cls-strip').innerHTML = FIRE.classes.map(function (c) {
-    return '<div class="cls"><div class="top"><span class="mark">'
-      + keyMark(c.key, 16, c.key === 'industrial' ? 5.2 : 6) + '</span><h3>' + c.label + '</h3></div>'
-      + '<div class="big">' + fmt(c.cx) + '<s>complexes · ' + fmt(c.act) + ' active</s></div>'
-      + '<div class="share"><span>detections</span><span class="track"><i style="width:'
-        + c.det_pct + '%"></i></span><em>' + c.det_pct + '%</em></div>'
-      + '<div class="share pow"><span>radiative power</span><span class="track"><i style="width:'
-        + c.frp_pct + '%"></i></span><em>' + c.frp_pct + '%</em></div>'
-      + '<div class="note">' + c.note + '</div></div>';
-  }).join('');
 
   /* ---- top 5 ---- */
   var t5max = Math.max.apply(null, FIRE.top5.map(function (d) { return d.fm24 || d.fm; }));
